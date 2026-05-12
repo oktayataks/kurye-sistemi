@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+/* ─── LiveMap pulse animasyonu ─────────────────────────────────────────── */
+@keyframes livemap-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+/* ─── LiveMap canlı durum noktası ──────────────────────────────────────── */
+@keyframes livemap-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.livemap-blink {
+  animation: livemap-blink 1.5s ease-in-out infinite;
+}

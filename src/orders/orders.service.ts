@@ -1,0 +1,170 @@
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Order, OrderStatus } from './order.entity';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { UserRole, User } from '../users/user.entity';
+
+@Injectable()
+export class OrdersService {
+  constructor(
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
+  ) {}
+
+  async create(createOrderDto: CreateOrderDto): Promise<Order> {
+    try {
+      const order = this.orderRepository.create(createOrderDto);
+      return await this.orderRepository.save(order);
+    } catch (error) {
+      throw new InternalServerErrorException('Sipariş oluşturulurken hata oluştu');
+    }
+  }
+
+  async findAll(
+    pagination: PaginationDto,
+    user: User,
+    restaurantId?: string,
+    courierId?: string,
+  ): Promise<PaginatedResult<Order>> {
+    try {
+      const { page = 1, limit = 20 } = pagination;
+      const skip = (page - 1) * limit;
+
+      const where: any = {};
+
+      if (user.role === UserRole.RESTAURANT && restaurantId) {
+        where.restaurantId = restaurantId;
+      } else if (user.role === UserRole.COURIER && courierId) {
+        where.courierId = courierId;
+      }
+
+      const [data, total] = await this.orderRepository.findAndCount({
+        where,
+        relations: ['restaurant', 'courier', 'courier.user'],
+        skip,
+        take: limit,
+        order: { createdAt: 'DESC' },
+      });
+
+      return {
+        data,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      throw new InternalServerErrorException('Siparişler listelenirken hata oluştu');
+    }
+  }
+
+  async findOne(id: string): Promise<Order> {
+    try {
+      const order = await this.orderRepository.findOne({
+        where: { id },
+        relations: ['restaurant', 'courier', 'courier.user'],
+      });
+      if (!order) {
+        throw new NotFoundException(`Sipariş bulunamadı: ${id}`);
+      }
+      return order;
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Sipariş getirilirken hata oluştu');
+    }
+  }
+
+  async updateStatus(
+    id: string,
+    updateStatusDto: UpdateOrderStatusDto,
+  ): Promise<Order> {
+    try {
+      const order = await this.findOne(id);
+
+      this.validateStatusTransition(order.status, updateStatusDto.status);
+      order.status = updateStatusDto.status;
+
+      if (updateStatusDto.status === OrderStatus.ASSIGNED) {
+        if (!updateStatusDto.courierId) {
+          throw new BadRequestException('ASSIGNED durumu için courierId gereklidir');
+        }
+        order.courierId = updateStatusDto.courierId;
+        order.assignedAt = new Date();
+      }
+
+      if (updateStatusDto.status === OrderStatus.PICKED_UP) {
+        order.pickedUpAt = new Date();
+      }
+
+      if (updateStatusDto.status === OrderStatus.DELIVERED) {
+        order.deliveredAt = new Date();
+      }
+
+      if (updateStatusDto.status === OrderStatus.CANCELLED) {
+        order.cancelledAt = new Date();
+      }
+
+      return await this.orderRepository.save(order);
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      )
+        throw error;
+      throw new InternalServerErrorException('Sipariş durumu güncellenirken hata oluştu');
+    }
+  }
+
+  async remove(id: string): Promise<{ message: string }> {
+    try {
+      const order = await this.findOne(id);
+
+      if (order.status !== OrderStatus.PENDING) {
+        throw new ForbiddenException(
+          `Sadece 'pending' durumundaki siparişler silinebilir. Mevcut durum: ${order.status}`,
+        );
+      }
+
+      await this.orderRepository.remove(order);
+      return { message: 'Sipariş başarıyla silindi' };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      )
+        throw error;
+      throw new InternalServerErrorException('Sipariş silinirken hata oluştu');
+    }
+  }
+
+  private validateStatusTransition(
+    current: OrderStatus,
+    next: OrderStatus,
+  ): void {
+    const validTransitions: Record<OrderStatus, OrderStatus[]> = {
+      [OrderStatus.PENDING]: [OrderStatus.ASSIGNED, OrderStatus.CANCELLED],
+      [OrderStatus.ASSIGNED]: [OrderStatus.PICKED_UP, OrderStatus.CANCELLED],
+      [OrderStatus.PICKED_UP]: [OrderStatus.DELIVERED],
+      [OrderStatus.DELIVERED]: [],
+      [OrderStatus.CANCELLED]: [],
+    };
+
+    if (!validTransitions[current].includes(next)) {
+      throw new BadRequestException(
+        `Geçersiz durum geçişi: "${current}" → "${next}". İzin verilenler: ${validTransitions[current].join(', ') || 'yok'}`,
+      );
+    }
+  }
+}

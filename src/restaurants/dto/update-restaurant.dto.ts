@@ -1,0 +1,11 @@
+import { PartialType } from '@nestjs/mapped-types';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsOptional } from 'class-validator';
+import { CreateRestaurantDto } from './create-restaurant.dto';
+
+export class UpdateRestaurantDto extends PartialType(CreateRestaurantDto) {
+  @ApiPropertyOptional({ example: true })
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
+}
