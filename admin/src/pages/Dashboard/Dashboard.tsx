@@ -1,25 +1,22 @@
 import { useQuery } from '@tanstack/react-query';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
-import {
-  MdShoppingCart, MdDeliveryDining, MdPending, MdCheckCircle,
-} from 'react-icons/md';
 import { ordersApi, couriersApi } from '../../services/api';
-import StatCard from '../../components/common/StatCard';
-import Card from '../../components/common/Card';
-import Badge from '../../components/common/Badge';
-import { SkeletonStatCards, SkeletonTable } from '../../components/common/Skeleton';
-import type { Order, PaginatedResult } from '../../types';
-import {
-  ORDER_STATUS_LABELS,
-  ORDER_STATUS_COLORS,
-} from '../../utils/helpers';
+import type { Courier, Order, PaginatedResult } from '../../types';
+import { SkeletonStatCards } from '../../components/common/Skeleton';
+import { formatCurrency } from '../../utils/helpers';
 
 const REFETCH_INTERVAL = 30_000;
-
-const PIE_COLORS = ['#eab308', '#6366f1', '#a855f7', '#22c55e', '#ef4444'];
 
 function isSameDay(a: Date, b: Date) {
   return (
@@ -30,231 +27,343 @@ function isSameDay(a: Date, b: Date) {
 }
 
 export default function Dashboard() {
+  // ─── Siparişleri çek ───────────────────────────────────────────────────────
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ['dashboard-orders'],
-    queryFn: () => ordersApi.getAll({ limit: 200 }).then((r) => r.data as PaginatedResult<Order>),
+    queryFn: () =>
+      ordersApi.getAll({ limit: 200 }).then((r) => r.data as PaginatedResult<Order>),
     refetchInterval: REFETCH_INTERVAL,
   });
 
-  const { data: activeCouriersData } = useQuery({
-    queryKey: ['dashboard-couriers-online'],
-    queryFn: () => couriersApi.getAll({ isOnline: true, limit: 200 }).then((r) => r.data),
+  // ─── Kuryeleri çek (online filtresi olmadan, hem total hem onlyOnline için) ─
+  const { data: couriersData, isLoading: couriersLoading } = useQuery({
+    queryKey: ['dashboard-couriers'],
+    queryFn: () =>
+      couriersApi
+        .getAll({ limit: 200 })
+        .then((r) => r.data as PaginatedResult<Courier>),
     refetchInterval: REFETCH_INTERVAL,
   });
 
   const orders: Order[] = ordersData?.data ?? [];
+  const couriers: Courier[] = couriersData?.data ?? [];
+
+  // ─── İstatistikler ─────────────────────────────────────────────────────────
   const today = new Date();
 
-  // ─── İstatistikler ──────────────────────────────────────────────────────────
-  const todayOrders = orders.filter((o) => isSameDay(new Date(o.createdAt), today)).length;
-  const activeCouriers = activeCouriersData?.meta?.total ?? 0;
-  const pendingOrders = orders.filter((o) => o.status === 'pending').length;
-  const completedOrders = orders.filter((o) => o.status === 'delivered').length;
+  const todayOrders = orders.filter((o) =>
+    isSameDay(new Date(o.createdAt), today),
+  );
 
-  // ─── Çizgi grafik: son 7 gün ────────────────────────────────────────────────
+  const deliveredOrders = orders.filter((o) => o.status === 'delivered');
+  const pendingOrders = orders.filter((o) => o.status === 'pending');
+  const activeOrders = orders.filter(
+    (o) => o.status === 'assigned' || o.status === 'picked_up',
+  );
+
+  const onlineCouriers = couriers.filter((c) => c.isOnline);
+
+  const totalRevenue = deliveredOrders.reduce(
+    (sum, o) => sum + (Number(o.orderTotal) || 0),
+    0,
+  );
+
+  const todayRevenue = todayOrders
+    .filter((o) => o.status === 'delivered')
+    .reduce((sum, o) => sum + (Number(o.orderTotal) || 0), 0);
+
+  // ─── Son 7 günün sipariş adetleri (Bar chart) ──────────────────────────────
   const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const label = d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' });
-    const count = orders.filter((o) => isSameDay(new Date(o.createdAt), d)).length;
-    return { label, count };
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - i));
+    const dayOrders = orders.filter((o) =>
+      isSameDay(new Date(o.createdAt), date),
+    );
+    return {
+      name: date.toLocaleDateString('tr-TR', { weekday: 'short' }),
+      sipariş: dayOrders.length,
+    };
   });
 
-  // ─── Pasta grafik: durum dağılımı ──────────────────────────────────────────
-  const statusCounts = (['pending', 'assigned', 'picked_up', 'delivered', 'cancelled'] as const)
-    .map((s) => ({
-      name: ORDER_STATUS_LABELS[s],
-      value: orders.filter((o) => o.status === s).length,
-    }))
-    .filter((s) => s.value > 0);
+  // ─── Durum dağılımı (Pie chart) ────────────────────────────────────────────
+  const statusData = [
+    {
+      name: 'Teslim Edildi',
+      value: deliveredOrders.length,
+      color: '#10b981',
+    },
+    {
+      name: 'Bekliyor',
+      value: pendingOrders.length,
+      color: '#f59e0b',
+    },
+    {
+      name: 'Aktif',
+      value: activeOrders.length,
+      color: '#6366f1',
+    },
+  ].filter((d) => d.value > 0);
 
-  // ─── Son 10 sipariş ─────────────────────────────────────────────────────────
+  // ─── Son 5 sipariş ─────────────────────────────────────────────────────────
   const recentOrders = [...orders]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 10);
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
+    .slice(0, 5);
 
-  if (ordersLoading) {
+  // ─── Yükleniyor durumu ─────────────────────────────────────────────────────
+  if (ordersLoading || couriersLoading) {
     return (
-      <div className="space-y-6">
+      <div className="p-6 space-y-6">
         <SkeletonStatCards count={4} />
-        <Card>
-          <SkeletonTable rows={6} columns={4} />
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 h-64 animate-pulse" />
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 h-64 animate-pulse" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       {/* Başlık */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800">Dashboard</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Canlı genel bakış — her 30 saniyede güncellenir</p>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
         <span className="flex items-center gap-1.5 text-xs text-green-600 bg-green-50 px-3 py-1.5 rounded-full font-medium">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          Canlı
+          Canlı — her 30 sn yenilenir
         </span>
       </div>
 
-      {/* ─── 4 İstatistik Kartı ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard
-          title="Toplam Sipariş (Bugün)"
-          value={todayOrders}
-          icon={MdShoppingCart}
-          color="indigo"
-        />
-        <StatCard
-          title="Aktif Kuryeler"
-          value={activeCouriers}
-          icon={MdDeliveryDining}
-          color="green"
-          subtitle="çevrimiçi"
-        />
-        <StatCard
-          title="Bekleyen Siparişler"
-          value={pendingOrders}
-          icon={MdPending}
-          color="yellow"
-        />
-        <StatCard
-          title="Tamamlanan Siparişler"
-          value={completedOrders}
-          icon={MdCheckCircle}
-          color="green"
-        />
+      {/* ─── Üst İstatistik Kartları ─────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Toplam Sipariş</p>
+              <p className="text-3xl font-bold text-gray-800">
+                {orders.length}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+              <span className="text-2xl">📦</span>
+            </div>
+          </div>
+          <p className="text-xs text-green-500 mt-2">
+            Bugün: {todayOrders.length} sipariş
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Aktif Kuryeler</p>
+              <p className="text-3xl font-bold text-gray-800">
+                {onlineCouriers.length}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+              <span className="text-2xl">🛵</span>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            Toplam: {couriers.length} kurye
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Toplam Gelir</p>
+              <p className="text-3xl font-bold text-gray-800">
+                {formatCurrency(totalRevenue)}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+              <span className="text-2xl">💰</span>
+            </div>
+          </div>
+          <p className="text-xs text-green-500 mt-2">
+            Bugün: {formatCurrency(todayRevenue)}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Bekleyen</p>
+              <p className="text-3xl font-bold text-gray-800">
+                {pendingOrders.length}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+              <span className="text-2xl">⏳</span>
+            </div>
+          </div>
+          <p className="text-xs text-blue-500 mt-2">
+            Aktif: {activeOrders.length} sipariş
+          </p>
+        </div>
       </div>
 
       {/* ─── Grafikler ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Çizgi grafik */}
-        <Card className="p-5 lg:col-span-2">
-          <h3 className="text-sm font-semibold text-gray-700 mb-1">Son 7 Gün Sipariş</h3>
-          <p className="text-xs text-gray-400 mb-4">Günlük sipariş adedi</p>
-          <ResponsiveContainer width="100%" height={230}>
-            <LineChart data={last7Days} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <Tooltip
-                contentStyle={{ fontSize: 12, borderRadius: 8, border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,.1)' }}
-                labelStyle={{ fontWeight: 600, color: '#374151' }}
-                formatter={(value) => [Number(value ?? 0), 'Sipariş']}
-              />
-              <Line
-                type="monotone"
-                dataKey="count"
-                name="Sipariş"
-                stroke="#6366f1"
-                strokeWidth={2.5}
-                dot={{ r: 4, fill: '#6366f1', strokeWidth: 0 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Son 7 Gün Bar Chart */}
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-700 mb-4">
+            Son 7 Gün Sipariş
+          </h2>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={last7Days}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+              <Tooltip />
+              <Bar dataKey="sipariş" fill="#6366f1" radius={[4, 4, 0, 0]} />
+            </BarChart>
           </ResponsiveContainer>
-        </Card>
+        </div>
 
-        {/* Pasta grafik */}
-        <Card className="p-5">
-          <h3 className="text-sm font-semibold text-gray-700 mb-1">Sipariş Durumu Dağılımı</h3>
-          <p className="text-xs text-gray-400 mb-4">Tüm siparişler</p>
-          {statusCounts.length > 0 ? (
-            <ResponsiveContainer width="100%" height={230}>
-              <PieChart>
-                <Pie
-                  data={statusCounts}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="42%"
-                  innerRadius={55}
-                  outerRadius={82}
-                  paddingAngle={3}
-                >
-                  {statusCounts.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ fontSize: 12, borderRadius: 8, border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,.1)' }}
-                  formatter={(value, name) => [Number(value ?? 0), String(name ?? '')]}
-                />
-                <Legend iconSize={9} iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
+        {/* Durum Dağılımı Pie Chart */}
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-700 mb-4">
+            Sipariş Durumları
+          </h2>
+          {statusData.length > 0 ? (
+            <div className="flex items-center justify-between">
+              <ResponsiveContainer width="60%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    dataKey="value"
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={index} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="space-y-2">
+                {statusData.map((item, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-sm text-gray-600">
+                      {item.name}: {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : (
-            <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
+            <div className="flex items-center justify-center h-48 text-gray-400">
               Henüz sipariş yok
             </div>
           )}
-        </Card>
+        </div>
       </div>
 
-      {/* ─── Canlı Sipariş Listesi (Son 10) ────────────────────────────── */}
-      <Card>
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700">Canlı Sipariş Listesi</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Son 10 sipariş</p>
-          </div>
-          <span className="text-xs text-gray-400">
-            {recentOrders.length} kayıt
-          </span>
+      {/* ─── Son Siparişler ────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <h2 className="text-lg font-semibold text-gray-700 mb-4">
+          Son Siparişler
+        </h2>
+        <div className="space-y-3">
+          {recentOrders.map((order) => (
+            <div
+              key={order.id}
+              className="flex items-center justify-between py-2 border-b border-gray-50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <span className="text-xs font-bold text-purple-600">
+                    #{order.orderNumber}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-800">
+                    {order.customerName}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(order.createdAt).toLocaleString('tr-TR')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-gray-700">
+                  {formatCurrency(Number(order.orderTotal) || 0)}
+                </span>
+                <span
+                  className={`text-xs px-2 py-1 rounded-full font-medium ${
+                    order.status === 'delivered'
+                      ? 'bg-green-100 text-green-600'
+                      : order.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-600'
+                        : order.status === 'cancelled'
+                          ? 'bg-red-100 text-red-600'
+                          : 'bg-blue-100 text-blue-600'
+                  }`}
+                >
+                  {order.status === 'delivered'
+                    ? 'Teslim'
+                    : order.status === 'pending'
+                      ? 'Bekliyor'
+                      : order.status === 'assigned'
+                        ? 'Atandı'
+                        : order.status === 'picked_up'
+                          ? 'Yolda'
+                          : 'İptal'}
+                </span>
+              </div>
+            </div>
+          ))}
+          {recentOrders.length === 0 && (
+            <p className="text-center text-gray-400 py-4">Henüz sipariş yok</p>
+          )}
         </div>
+      </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50">
-                {['Sipariş No', 'Restoran', 'Kurye', 'Durum'].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {recentOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50/70 transition-colors">
-                  <td className="px-5 py-3.5">
-                    <span className="font-mono text-gray-600 font-medium">
-                      #{order.orderNumber}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 text-gray-700 font-medium">
-                    {order.restaurant?.name ?? (
-                      <span className="text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-3.5 text-gray-600">
-                    {order.courier?.user?.fullName ?? (
-                      <span className="text-gray-400 text-xs italic">Atanmadı</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <Badge
-                      label={ORDER_STATUS_LABELS[order.status]}
-                      className={ORDER_STATUS_COLORS[order.status]}
-                    />
-                  </td>
-                </tr>
-              ))}
-              {recentOrders.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="text-center py-10 text-gray-400 text-sm">
-                    Henüz sipariş bulunmuyor
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {/* ─── Aktif Kuryeler ────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <h2 className="text-lg font-semibold text-gray-700 mb-4">
+          Aktif Kuryeler
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {onlineCouriers.length > 0 ? (
+            onlineCouriers.map((courier) => (
+              <div
+                key={courier.id}
+                className="flex items-center gap-3 p-3 bg-green-50 rounded-xl"
+              >
+                <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
+                  {courier.user?.fullName?.charAt(0) ?? 'K'}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-700 truncate">
+                    {courier.user?.fullName ?? 'Kurye'}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    <span className="text-xs text-green-600">Online</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-400 col-span-2 md:col-span-4 text-center py-4">
+              Aktif kurye yok
+            </p>
+          )}
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
