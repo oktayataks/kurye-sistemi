@@ -15,8 +15,9 @@ import {
   MdCalendarToday,
   MdPending,
 } from 'react-icons/md';
-import { ordersApi, restaurantsApi } from '../../services/api';
+import { couriersApi, ordersApi, restaurantsApi } from '../../services/api';
 import type {
+  Courier,
   Order,
   OrderStatus,
   PaginatedResult,
@@ -90,6 +91,15 @@ export default function Orders() {
       restaurantsApi
         .getAll({ page: 1, limit: 100 })
         .then((r) => r.data as PaginatedResult<Restaurant>),
+  });
+
+  // Online kuryeler (satır içi "Kuryeye At" dropdown'ı için)
+  const { data: onlineCouriersData } = useQuery({
+    queryKey: ['couriers', 'online-for-inline-assign'],
+    queryFn: () =>
+      couriersApi
+        .getAll({ page: 1, limit: 100, isOnline: true })
+        .then((r) => r.data as PaginatedResult<Courier>),
   });
 
   // ─── Mutation'lar ───────────────────────────────────────────────────────────
@@ -183,6 +193,7 @@ export default function Orders() {
 
   const meta = data?.meta;
   const restaurants = restaurantsData?.data ?? [];
+  const onlineCouriers = onlineCouriersData?.data ?? [];
 
   // ─── Filtre sıfırlama ───────────────────────────────────────────────────────
   const hasActiveFilter =
@@ -382,6 +393,7 @@ export default function Orders() {
                       'Kurye',
                       'Tutar',
                       'Durum',
+                      'Hızlı İşlem',
                       'İşlemler',
                     ].map((h) => (
                       <th
@@ -398,6 +410,15 @@ export default function Orders() {
                     <OrderRow
                       key={order.id}
                       order={order}
+                      couriers={onlineCouriers}
+                      isAssigning={
+                        manualAssignMutation.isPending &&
+                        manualAssignMutation.variables?.orderId === order.id
+                      }
+                      isProgressing={
+                        updateStatusMutation.isPending &&
+                        updateStatusMutation.variables?.orderId === order.id
+                      }
                       onDetail={() => setDetailOrder(order)}
                       onAssign={() => handleOpenAssign(order)}
                       onUpdateStatus={() => setStatusOrder(order)}
@@ -406,11 +427,23 @@ export default function Orders() {
                         setAutoResult(null);
                         setAssignOrder(order);
                       }}
+                      onQuickAssignCourier={(courierId) =>
+                        manualAssignMutation.mutate({
+                          orderId: order.id,
+                          courierId,
+                        })
+                      }
+                      onProgressStatus={(nextStatus) =>
+                        updateStatusMutation.mutate({
+                          orderId: order.id,
+                          status: nextStatus,
+                        })
+                      }
                     />
                   ))}
                   {orders.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="text-center py-16">
+                      <td colSpan={9} className="text-center py-16">
                         <MdReceiptLong className="mx-auto text-5xl text-gray-300 mb-3" />
                         <p className="text-sm font-medium text-gray-700 mb-1">
                           Sipariş bulunamadı
@@ -522,23 +555,34 @@ export default function Orders() {
 
 interface OrderRowProps {
   order: Order;
+  couriers: Courier[];
+  isAssigning: boolean;
+  isProgressing: boolean;
   onDetail: () => void;
   onAssign: () => void;
   onUpdateStatus: () => void;
   onDelete: () => void;
   onAutoAssign: () => void;
+  onQuickAssignCourier: (courierId: string) => void;
+  onProgressStatus: (nextStatus: OrderStatus) => void;
 }
 
 function OrderRow({
   order,
+  couriers,
+  isAssigning,
+  isProgressing,
   onDetail,
   onAssign,
   onUpdateStatus,
   onDelete,
   onAutoAssign,
+  onQuickAssignCourier,
+  onProgressStatus,
 }: OrderRowProps) {
   const isPending = order.status === 'pending';
   const isFinal = order.status === 'delivered' || order.status === 'cancelled';
+  const [selectedCourierId, setSelectedCourierId] = useState('');
 
   return (
     <tr className="hover:bg-gray-50/70 transition-colors">
@@ -618,6 +662,86 @@ function OrderRow({
         >
           {ORDER_STATUS_LABELS[order.status]}
         </span>
+      </td>
+
+      {/* Hızlı İşlem (durum geçişi + kurye atama) */}
+      <td className="px-4 py-3">
+        {order.status === 'pending' && (
+          <div className="flex items-center gap-1.5">
+            <select
+              value={selectedCourierId}
+              onChange={(e) => setSelectedCourierId(e.target.value)}
+              disabled={isAssigning || couriers.length === 0}
+              className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 max-w-[140px]"
+            >
+              <option value="">
+                {couriers.length === 0 ? 'Online kurye yok' : 'Kurye seç...'}
+              </option>
+              {couriers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.user?.fullName ?? 'İsimsiz'}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() =>
+                selectedCourierId && onQuickAssignCourier(selectedCourierId)
+              }
+              disabled={!selectedCourierId || isAssigning}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {isAssigning ? (
+                <span className="h-3 w-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              ) : (
+                <MdLocalShipping className="text-sm" />
+              )}
+              Kuryeye At
+            </button>
+          </div>
+        )}
+
+        {order.status === 'assigned' && (
+          <button
+            type="button"
+            onClick={() => onProgressStatus('picked_up')}
+            disabled={isProgressing}
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            {isProgressing ? (
+              <span className="h-3 w-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+            ) : (
+              <MdSwapHoriz className="text-sm" />
+            )}
+            Yolda
+          </button>
+        )}
+
+        {order.status === 'picked_up' && (
+          <button
+            type="button"
+            onClick={() => onProgressStatus('delivered')}
+            disabled={isProgressing}
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            {isProgressing ? (
+              <span className="h-3 w-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+            ) : (
+              <MdSwapHoriz className="text-sm" />
+            )}
+            Teslim Edildi
+          </button>
+        )}
+
+        {order.status === 'delivered' && (
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700">
+            ✅ Teslim
+          </span>
+        )}
+
+        {order.status === 'cancelled' && (
+          <span className="text-xs text-gray-400">—</span>
+        )}
       </td>
 
       {/* İşlemler */}
