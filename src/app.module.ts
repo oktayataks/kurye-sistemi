@@ -22,7 +22,7 @@ import { Order } from './orders/order.entity';
         type: 'postgres',
         url: configService.get<string>('DATABASE_URL'),
         entities: [User, Restaurant, Courier, Order],
-        synchronize: true,
+        synchronize: false,
         ssl: { rejectUnauthorized: false },
       }),
       inject: [ConfigService],
