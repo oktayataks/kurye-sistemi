@@ -5,6 +5,7 @@ import {
   MdDeliveryDining,
   MdShoppingCart,
   MdMyLocation,
+  MdGpsFixed,
   MdManageAccounts,
   MdClose,
 } from 'react-icons/md';
@@ -14,7 +15,8 @@ const navItems = [
   { to: '/restaurants', label: 'Restoranlar', icon: MdRestaurant },
   { to: '/couriers', label: 'Kuryeler', icon: MdDeliveryDining },
   { to: '/orders', label: 'Siparişler', icon: MdShoppingCart },
-  { to: '/live-map', label: 'Canlı Takip', icon: MdMyLocation },
+  { to: '/live-map', label: 'Canlı Harita', icon: MdMyLocation },
+  { to: '/live-tracking', label: 'Canlı Takip', icon: MdGpsFixed },
   { to: '/users', label: 'Kullanıcı Yönetimi', icon: MdManageAccounts },
 ];
 
