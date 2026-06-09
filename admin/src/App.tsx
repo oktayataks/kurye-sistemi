@@ -14,6 +14,7 @@ import CouriersPage from './pages/Couriers';
 import OrdersPage from './pages/Orders';
 import LiveMapPage from './pages/LiveMap';
 import LiveTrackingPage from './pages/LiveTracking';
+import ReportsPage from './pages/Reports';
 import UsersPage from './pages/Users';
 import {
   RestaurantDashboard,
@@ -108,6 +109,7 @@ export default function App() {
             <Route path="orders" element={<OrdersPage />} />
             <Route path="live-map" element={<LiveMapPage />} />
             <Route path="live-tracking" element={<LiveTrackingPage />} />
+            <Route path="reports" element={<ReportsPage />} />
             <Route path="users" element={<UsersPage />} />
           </Route>
 
