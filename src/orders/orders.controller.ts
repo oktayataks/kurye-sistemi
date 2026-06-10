@@ -64,6 +64,22 @@ export class OrdersController {
     );
   }
 
+  @Get('available')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Bekleyen siparişleri listele (kuryeler için)' })
+  @ApiResponse({ status: 200, description: 'Bekleyen sipariş listesi' })
+  async getAvailableOrders() {
+    return this.ordersService.getAvailableOrders();
+  }
+
+  @Get('my-orders')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Kuryenin kendi siparişlerini listele' })
+  @ApiResponse({ status: 200, description: 'Kurye sipariş listesi' })
+  async getMyCourierOrders(@Request() req) {
+    return this.ordersService.getMyCourierOrders(req.user.sub);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Sipariş detayı getir' })
   @ApiResponse({ status: 200, description: 'Sipariş bulundu' })

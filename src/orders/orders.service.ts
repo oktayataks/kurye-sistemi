@@ -6,7 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { Order, OrderStatus } from './order.entity';
 import { Courier } from '../couriers/courier.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -150,6 +150,32 @@ export class OrdersService {
         throw error;
       throw new InternalServerErrorException('Sipariş silinirken hata oluştu');
     }
+  }
+
+  async getAvailableOrders() {
+    return this.orderRepository.find({
+      where: { status: OrderStatus.PENDING, courierId: IsNull() },
+      relations: ['restaurant'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async getMyCourierOrders(userId: string) {
+    const courier = await this.couriersRepository.findOne({
+      where: { user: { id: userId } },
+    });
+
+    if (!courier) return [];
+
+    return this.orderRepository.find({
+      where: [
+        { courierId: courier.id, status: OrderStatus.ASSIGNED },
+        { courierId: courier.id, status: OrderStatus.PICKED_UP },
+        { courierId: courier.id, status: OrderStatus.DELIVERED },
+      ],
+      relations: ['restaurant'],
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async acceptOrder(orderId: string, userId: string) {
