@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order, OrderStatus } from './order.entity';
+import { Courier } from '../couriers/courier.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
@@ -19,6 +20,8 @@ export class OrdersService {
   constructor(
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
+    @InjectRepository(Courier)
+    private readonly couriersRepository: Repository<Courier>,
   ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
@@ -147,6 +150,36 @@ export class OrdersService {
         throw error;
       throw new InternalServerErrorException('Sipariş silinirken hata oluştu');
     }
+  }
+
+  async acceptOrder(orderId: string, userId: string) {
+    const courier = await this.couriersRepository.findOne({
+      where: { user: { id: userId } },
+    });
+
+    if (!courier) {
+      throw new NotFoundException('Kurye bulunamadı');
+    }
+
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Sipariş bulunamadı');
+    }
+
+    if (order.status !== 'pending') {
+      throw new BadRequestException('Bu sipariş zaten alınmış!');
+    }
+
+    order.courierId = courier.id;
+    order.status = OrderStatus.ASSIGNED;
+    order.assignedAt = new Date();
+
+    await this.orderRepository.save(order);
+
+    return order;
   }
 
   private validateStatusTransition(

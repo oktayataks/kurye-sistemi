@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Request,
   ParseUUIDPipe,
   Query,
   HttpCode,
@@ -94,6 +95,15 @@ export class OrdersController {
   @ApiResponse({ status: 404, description: 'Sipariş veya restoran bulunamadı' })
   assignCourier(@Param('id', ParseUUIDPipe) id: string) {
     return this.assignmentService.findBestCourier(id);
+  }
+
+  @Post(':id/accept')
+  @UseGuards(JwtAuthGuard)
+  async acceptOrder(
+    @Param('id') id: string,
+    @Request() req,
+  ) {
+    return this.ordersService.acceptOrder(id, req.user.sub);
   }
 
   @Delete(':id')
