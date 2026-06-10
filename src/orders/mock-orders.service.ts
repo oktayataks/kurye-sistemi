@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Order } from './order.entity';
+import { Order, OrderStatus } from './order.entity';
 import { Courier } from '../couriers/courier.entity';
 import { Restaurant } from '../restaurants/restaurant.entity';
 import { Cron } from '@nestjs/schedule';
@@ -60,10 +60,7 @@ export class MockOrdersService {
       const orderTotal = Math.floor(Math.random() * 200 + 50);
       const deliveryFee = Math.floor(Math.random() * 20 + 10);
 
-      const orderNumber = Math.floor(Math.random() * 9000000 + 1000000).toString();
-
       const order = this.ordersRepository.create({
-        orderNumber,
         restaurantId: restaurant.id,
         customerName: customer.name,
         customerPhone: customer.phone,
@@ -72,12 +69,12 @@ export class MockOrdersService {
         deliveryLongitude: deliveryAddress.lng,
         orderTotal,
         deliveryFee,
-        status: 'pending',
+        status: OrderStatus.PENDING,
         notes: `${source} siparişi`,
       });
 
-      await this.ordersRepository.save(order);
-      console.log(`✅ Mock sipariş oluşturuldu: #${orderNumber} - ${customer.name}`);
+      const saved = await this.ordersRepository.save(order);
+      console.log(`✅ Mock sipariş oluşturuldu: #${saved.orderNumber} - ${customer.name}`);
 
     } catch (error) {
       console.error('Mock sipariş oluşturulamadı:', error);
