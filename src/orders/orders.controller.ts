@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { AssignmentService } from './services/assignment.service';
+import { MockOrdersService } from './mock-orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrderFilterDto } from './dto/order-filter.dto';
@@ -38,6 +39,7 @@ export class OrdersController {
   constructor(
     private readonly ordersService: OrdersService,
     private readonly assignmentService: AssignmentService,
+    private readonly mockOrdersService: MockOrdersService,
   ) {}
 
   @Post()
@@ -80,6 +82,13 @@ export class OrdersController {
     @Body() updateStatusDto: UpdateOrderStatusDto,
   ) {
     return this.ordersService.updateStatus(id, updateStatusDto);
+  }
+
+  @Post('mock/generate')
+  @ApiOperation({ summary: 'Mock sipariş oluştur (test amaçlı)' })
+  @ApiResponse({ status: 201, description: 'Mock sipariş oluşturuldu' })
+  async generateMockOrder() {
+    return this.mockOrdersService.generateSingleOrder();
   }
 
   @Post(':id/assign')
