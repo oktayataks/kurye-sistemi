@@ -7,9 +7,13 @@ import { MockOrdersService } from './mock-orders.service';
 import { Order } from './order.entity';
 import { Courier } from '../couriers/courier.entity';
 import { Restaurant } from '../restaurants/restaurant.entity';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, Courier, Restaurant])],
+  imports: [
+    TypeOrmModule.forFeature([Order, Courier, Restaurant]),
+    NotificationsModule,
+  ],
   controllers: [OrdersController],
   providers: [OrdersService, AssignmentService, MockOrdersService],
   exports: [OrdersService, AssignmentService],

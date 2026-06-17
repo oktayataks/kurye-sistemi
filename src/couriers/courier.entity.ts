@@ -47,6 +47,9 @@ export class Courier {
   @Column({ type: 'decimal', precision: 3, scale: 2, default: 0 })
   rating: number;
 
+  @Column({ nullable: true })
+  fcmToken: string;
+
   @OneToOne(() => User, (user) => user.courier)
   @JoinColumn({ name: 'userId' })
   user: User;

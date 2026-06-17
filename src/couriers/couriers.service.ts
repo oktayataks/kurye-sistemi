@@ -115,6 +115,13 @@ export class CouriersService {
     }
   }
 
+  async findByUserId(userId: string) {
+    return this.courierRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['user'],
+    });
+  }
+
   async findOne(id: string): Promise<Courier> {
     try {
       const courier = await this.courierRepository.findOne({
@@ -169,6 +176,11 @@ export class CouriersService {
       if (error instanceof NotFoundException) throw error;
       throw new InternalServerErrorException('Durum güncellenirken hata oluştu');
     }
+  }
+
+  async updateFcmToken(id: string, fcmToken: string) {
+    await this.courierRepository.update(id, { fcmToken });
+    return { success: true };
   }
 
   async remove(id: string): Promise<{ message: string }> {

@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module';
 import { RestaurantsModule } from './restaurants/restaurants.module';
 import { CouriersModule } from './couriers/couriers.module';
 import { OrdersModule } from './orders/orders.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { User } from './users/user.entity';
 import { Restaurant } from './restaurants/restaurant.entity';
 import { Courier } from './couriers/courier.entity';
@@ -36,6 +37,7 @@ import { Order } from './orders/order.entity';
     RestaurantsModule,
     CouriersModule,
     OrdersModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

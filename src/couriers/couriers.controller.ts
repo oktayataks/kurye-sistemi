@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Request,
   ParseUUIDPipe,
   Query,
 } from '@nestjs/common';
@@ -75,6 +76,14 @@ export class CouriersController {
     );
   }
 
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Kurye kendi profil bilgisini getir' })
+  @ApiResponse({ status: 200, description: 'Kurye profili' })
+  async getMyProfile(@Request() req) {
+    return this.couriersService.findByUserId(req.user.sub);
+  }
+
   @Get(':id')
   @Roles(UserRole.ADMIN, UserRole.RESTAURANT)
   @ApiOperation({ summary: 'Kurye detayı getir' })
@@ -104,6 +113,17 @@ export class CouriersController {
     @Body() locationDto: UpdateCourierLocationDto,
   ) {
     return this.couriersService.updateLocation(id, locationDto);
+  }
+
+  @Patch(':id/fcm-token')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Kurye FCM token güncelle' })
+  @ApiResponse({ status: 200, description: 'FCM token güncellendi' })
+  async updateFcmToken(
+    @Param('id') id: string,
+    @Body() body: { fcmToken: string },
+  ) {
+    return this.couriersService.updateFcmToken(id, body.fcmToken);
   }
 
   @Patch(':id/status')
