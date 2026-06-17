@@ -149,19 +149,12 @@ export class CouriersService {
     }
   }
 
-  async updateLocation(
-    id: string,
-    locationDto: UpdateCourierLocationDto,
-  ): Promise<Courier> {
-    try {
-      const courier = await this.findOne(id);
-      courier.latitude = locationDto.latitude;
-      courier.longitude = locationDto.longitude;
-      return await this.courierRepository.save(courier);
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException('Konum güncellenirken hata oluştu');
-    }
+  async updateLocation(id: string, latitude: number, longitude: number) {
+    await this.courierRepository.update(id, {
+      latitude,
+      longitude,
+    });
+    return { success: true };
   }
 
   async updateStatus(

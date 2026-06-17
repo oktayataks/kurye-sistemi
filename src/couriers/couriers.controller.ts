@@ -112,7 +112,7 @@ export class CouriersController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() locationDto: UpdateCourierLocationDto,
   ) {
-    return this.couriersService.updateLocation(id, locationDto);
+    return this.couriersService.updateLocation(id, locationDto.latitude, locationDto.longitude);
   }
 
   @Patch(':id/fcm-token')
