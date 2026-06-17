@@ -1,12 +1,13 @@
-import * as admin from 'firebase-admin';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class NotificationsService {
   constructor() {
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
+    if (getApps().length === 0) {
+      initializeApp({
+        credential: cert({
           projectId: process.env.FIREBASE_PROJECT_ID,
           clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
           privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
@@ -18,9 +19,9 @@ export class NotificationsService {
   async sendNewOrderNotification(tokens: string[], orderNumber: string) {
     if (tokens.length === 0) return;
 
+    const messaging = getMessaging();
     const promises = tokens.map((token) =>
-      admin
-        .messaging()
+      messaging
         .send({
           token,
           notification: {
