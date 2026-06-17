@@ -16,7 +16,7 @@ export class NotificationsService {
     }
   }
 
-  async sendNewOrderNotification(tokens: string[], orderNumber: string) {
+  async sendNewOrderNotification(tokens: string[], orderNumber: string, orderId: string) {
     if (tokens.length === 0) return;
 
     const messaging = getMessaging();
@@ -27,6 +27,11 @@ export class NotificationsService {
           notification: {
             title: '🛵 Yeni Sipariş!',
             body: `#${orderNumber} numaralı sipariş sizi bekliyor!`,
+          },
+          data: {
+            orderId,
+            orderNumber: String(orderNumber),
+            type: 'new_order',
           },
           android: {
             priority: 'high',

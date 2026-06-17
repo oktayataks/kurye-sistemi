@@ -89,6 +89,7 @@ export class MockOrdersService {
         await this.notificationsService.sendNewOrderNotification(
           tokens,
           String(saved.orderNumber),
+          saved.id,
         );
       }
 
