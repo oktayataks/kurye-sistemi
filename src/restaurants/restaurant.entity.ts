@@ -46,6 +46,24 @@ export class Restaurant {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ type: 'varchar', nullable: true })
+  yemeksepetiApiKey: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  getirApiKey: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  trendyolApiKey: string;
+
+  @Column({ type: 'boolean', default: false })
+  yemeksepetiEnabled: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  getirEnabled: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  trendyolEnabled: boolean;
+
   @ManyToOne(() => User, (user) => user.restaurants, { nullable: false })
   @JoinColumn({ name: 'userId' })
   user: User;
