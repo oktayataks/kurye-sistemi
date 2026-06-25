@@ -57,7 +57,6 @@ const REFETCH_INTERVAL = 10_000;
 
 export default function LiveTracking() {
   const [selectedCourier, setSelectedCourier] = useState<Courier | null>(null);
-  const [panelOpen, setPanelOpen] = useState(false);
 
   // Kuryeleri her 10 saniyede güncelle
   const { data: couriers = [] } = useQuery<Courier[]>({
