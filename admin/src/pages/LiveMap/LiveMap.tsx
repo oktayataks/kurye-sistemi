@@ -170,7 +170,7 @@ export default function LiveMap() {
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="-m-4 sm:-m-6 flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden">
+    <div className="-m-4 sm:-m-6 flex flex-col md:flex-row overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
       {/* Mobile toggle button */}
       <button
         className="md:hidden flex items-center justify-between px-4 py-2.5 bg-white border-b border-gray-200 text-sm font-medium text-gray-700 z-10"
@@ -187,7 +187,7 @@ export default function LiveMap() {
       </button>
 
       {/* Sidebar */}
-      <div className={`md:block ${panelOpen ? 'block' : 'hidden'} md:h-full`}>
+      <div className={`${panelOpen ? 'block' : 'hidden'} md:block md:h-full flex-shrink-0`}>
         <LiveMapSidebar
           onlineCouriers={stats.onlineCouriers}
           totalCouriers={stats.totalCouriers}
@@ -206,11 +206,11 @@ export default function LiveMap() {
       </div>
 
       {/* Map */}
-      <div className="flex-1 relative min-h-[300px]">
+      <div className="flex-1 relative min-h-[400px]">
         <MapContainer
           center={ISTANBUL_CENTER}
           zoom={11}
-          style={{ height: '100%', width: '100%' }}
+          style={{ position: 'absolute', inset: 0, height: '100%', width: '100%' }}
           scrollWheelZoom
         >
           <TileLayer
