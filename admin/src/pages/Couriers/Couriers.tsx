@@ -298,7 +298,59 @@ export default function Couriers() {
           <SkeletonTable rows={6} columns={7} />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Mobile: kart görünümü */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {filteredCouriers.map((c) => (
+                <div key={c.id} className="p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
+                        {getInitials(c.user?.fullName ?? '?')}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{c.user?.fullName ?? '—'}</p>
+                        <p className="text-xs text-gray-400 truncate">{c.user?.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => setMapTarget(c)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
+                        <MdMyLocation className="text-base" />
+                      </button>
+                      <button onClick={() => openEdit(c)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg">
+                        <MdEdit className="text-base" />
+                      </button>
+                      <button onClick={() => setDeleteTarget(c)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
+                        <MdDelete className="text-base" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <VehicleBadge type={c.vehicleType} />
+                    <StatusToggle
+                      isOnline={c.isOnline}
+                      disabled={statusMutation.isPending}
+                      onChange={() => statusMutation.mutate({ id: c.id, isOnline: !c.isOnline })}
+                    />
+                    <RatingStars rating={Number(c.rating ?? 0)} />
+                  </div>
+                  {c.user?.phone && (
+                    <a href={`tel:${c.user.phone}`} className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <MdPhone className="text-gray-400" />
+                      {c.user.phone}
+                    </a>
+                  )}
+                </div>
+              ))}
+              {filteredCouriers.length === 0 && (
+                <div className="py-12 text-center text-gray-400">
+                  <MdDeliveryDining className="mx-auto text-4xl text-gray-300 mb-2" />
+                  <p className="text-sm">{search || vehicleFilter !== 'all' || onlineFilter !== 'all' ? 'Filtreyle eşleşen kurye bulunamadı' : 'Henüz kurye yok'}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop: tablo */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
@@ -432,6 +484,8 @@ export default function Couriers() {
                   )}
                 </tbody>
               </table>
+            </div>
+
             </div>
 
             {/* Pagination */}

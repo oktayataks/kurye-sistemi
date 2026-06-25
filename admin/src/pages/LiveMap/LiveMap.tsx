@@ -44,6 +44,7 @@ export default function LiveMap() {
   const [showOnlineOnly, setShowOnlineOnly] = useState(true);
   const [showActiveOnly, setShowActiveOnly] = useState(true);
   const [focusPosition, setFocusPosition] = useState<LatLngTuple | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
   const lastUpdatedRef = useRef<Date | null>(null);
 
   // ─── Tek query'de tüm veri (5 sn polling) ──────────────────────────────────
@@ -169,26 +170,43 @@ export default function LiveMap() {
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="-m-6 flex h-[calc(100vh-64px)] overflow-hidden">
+    <div className="-m-4 sm:-m-6 flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden">
+      {/* Mobile toggle button */}
+      <button
+        className="md:hidden flex items-center justify-between px-4 py-2.5 bg-white border-b border-gray-200 text-sm font-medium text-gray-700 z-10"
+        onClick={() => setPanelOpen((v) => !v)}
+      >
+        <span className="flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+          </span>
+          Panel — {stats.onlineCouriers} online kurye, {stats.activeOrders} aktif sipariş
+        </span>
+        <span>{panelOpen ? '▲' : '▼'}</span>
+      </button>
+
       {/* Sidebar */}
-      <LiveMapSidebar
-        onlineCouriers={stats.onlineCouriers}
-        totalCouriers={stats.totalCouriers}
-        activeOrders={stats.activeOrders}
-        pendingOrders={stats.pendingOrders}
-        totalRestaurants={stats.totalRestaurants}
-        showOnlineOnly={showOnlineOnly}
-        showActiveOnly={showActiveOnly}
-        isPolling={isFetching}
-        lastUpdated={lastUpdatedRef.current}
-        onToggleOnline={() => setShowOnlineOnly((v) => !v)}
-        onToggleActive={() => setShowActiveOnly((v) => !v)}
-        onRefresh={() => refetch()}
-        onFocusOrder={handleFocusOrder}
-      />
+      <div className={`md:block ${panelOpen ? 'block' : 'hidden'} md:h-full`}>
+        <LiveMapSidebar
+          onlineCouriers={stats.onlineCouriers}
+          totalCouriers={stats.totalCouriers}
+          activeOrders={stats.activeOrders}
+          pendingOrders={stats.pendingOrders}
+          totalRestaurants={stats.totalRestaurants}
+          showOnlineOnly={showOnlineOnly}
+          showActiveOnly={showActiveOnly}
+          isPolling={isFetching}
+          lastUpdated={lastUpdatedRef.current}
+          onToggleOnline={() => setShowOnlineOnly((v) => !v)}
+          onToggleActive={() => setShowActiveOnly((v) => !v)}
+          onRefresh={() => refetch()}
+          onFocusOrder={handleFocusOrder}
+        />
+      </div>
 
       {/* Map */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative min-h-[300px]">
         <MapContainer
           center={ISTANBUL_CENTER}
           zoom={11}

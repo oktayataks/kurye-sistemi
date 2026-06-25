@@ -57,6 +57,7 @@ const REFETCH_INTERVAL = 10_000;
 
 export default function LiveTracking() {
   const [selectedCourier, setSelectedCourier] = useState<Courier | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   // Kuryeleri her 10 saniyede güncelle
   const { data: couriers = [] } = useQuery<Courier[]>({
@@ -86,9 +87,21 @@ export default function LiveTracking() {
   const offlineCouriers = couriers.filter((c) => !c.isOnline);
 
   return (
-    <div className="-m-4 sm:-m-6 flex h-[calc(100vh-64px)]">
+    <div className="-m-4 sm:-m-6 flex flex-col md:flex-row h-[calc(100vh-64px)]">
+      {/* Mobile toggle */}
+      <button
+        className="md:hidden flex items-center justify-between px-4 py-2.5 bg-white border-b border-gray-200 text-sm font-medium text-gray-700 z-10 flex-shrink-0"
+        onClick={() => setPanelOpen((v) => !v)}
+      >
+        <span className="flex items-center gap-2">
+          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          Canlı Takip — {onlineCouriers.length} online, {orders.length} aktif sipariş
+        </span>
+        <span>{panelOpen ? '▲' : '▼'}</span>
+      </button>
+
       {/* ─── Sol Panel ──────────────────────────────────────────────────── */}
-      <div className="w-80 bg-white border-r overflow-y-auto flex-shrink-0">
+      <div className={`${panelOpen ? 'block' : 'hidden'} md:block w-full md:w-80 bg-white border-r overflow-y-auto flex-shrink-0 max-h-[50vh] md:max-h-full`}>
         <div className="p-4 border-b">
           <h2 className="text-lg font-bold text-gray-800">Canlı Takip</h2>
           <p className="text-xs text-gray-400">Her 10 saniyede güncellenir</p>
@@ -207,7 +220,7 @@ export default function LiveTracking() {
       </div>
 
       {/* ─── Harita ─────────────────────────────────────────────────────── */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative min-h-[300px]">
         <MapContainer
           center={[41.0082, 28.9784]}
           zoom={12}

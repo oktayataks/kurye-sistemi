@@ -381,7 +381,63 @@ export default function Orders() {
           <SkeletonTable rows={8} columns={8} />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Mobile: kart görünümü */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {orders.map((order) => (
+                <div key={order.id} className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-mono font-semibold text-gray-800 text-sm">#{order.orderNumber}</p>
+                      <p className="text-xs text-gray-400">{formatRelativeTime(order.createdAt)}</p>
+                    </div>
+                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${ORDER_STATUS_COLORS[order.status]}`}>
+                      {ORDER_STATUS_LABELS[order.status]}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 text-sm truncate">{order.customerName}</p>
+                      <p className="text-xs text-gray-400 truncate">{order.customerPhone}</p>
+                    </div>
+                    <p className="font-semibold text-gray-800 flex-shrink-0">{formatCurrency(order.orderTotal)}</p>
+                  </div>
+                  <p className="text-xs text-gray-500 truncate">{order.restaurant?.name ?? '—'}</p>
+                  <p className="text-xs text-gray-500 line-clamp-1">{order.deliveryAddress}</p>
+                  {order.courier && (
+                    <p className="text-xs text-indigo-600 font-medium">🛵 {order.courier.user?.fullName}</p>
+                  )}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button onClick={() => setDetailOrder(order)} className="p-1.5 text-gray-600 hover:bg-indigo-50 rounded-lg" title="Detay">
+                      <MdVisibility className="text-base" />
+                    </button>
+                    {order.status === 'pending' && (
+                      <>
+                        <button onClick={() => { setAutoResult(null); setAssignOrder(order); }} className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg" title="Kurye Ata">
+                          <MdAutoAwesome className="text-base" />
+                        </button>
+                        <button onClick={() => setDeleteOrder(order)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg" title="Sil">
+                          <MdDelete className="text-base" />
+                        </button>
+                      </>
+                    )}
+                    {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                      <button onClick={() => setStatusOrder(order)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="Durum Güncelle">
+                        <MdSwapHoriz className="text-base" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {orders.length === 0 && (
+                <div className="py-16 text-center">
+                  <MdReceiptLong className="mx-auto text-5xl text-gray-300 mb-3" />
+                  <p className="text-sm font-medium text-gray-700">Sipariş bulunamadı</p>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop: tablo */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
@@ -458,6 +514,8 @@ export default function Orders() {
                   )}
                 </tbody>
               </table>
+            </div>
+
             </div>
 
             {/* Pagination */}

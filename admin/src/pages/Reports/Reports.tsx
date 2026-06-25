@@ -162,17 +162,17 @@ export default function Reports() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 md:p-6 space-y-4 md:space-y-6">
       {/* ─── Başlık + Tarih Filtresi ─────────────────────────────────── */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Raporlar</h1>
-          <p className="text-gray-400 text-sm">Detaylı istatistikler</p>
+          <h1 className="text-lg md:text-2xl font-bold text-gray-800">Raporlar</h1>
+          <p className="text-gray-400 text-xs md:text-sm">Detaylı istatistikler</p>
         </div>
         <select
           value={dateRange}
           onChange={(e) => setDateRange(e.target.value as DateRange)}
-          className="border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
           <option value="7">Son 7 Gün</option>
           <option value="30">Son 30 Gün</option>
@@ -181,37 +181,37 @@ export default function Reports() {
       </div>
 
       {/* ─── Özet Kartları ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-500">Toplam Sipariş</p>
-          <p className="text-3xl font-bold text-gray-800 mt-1">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="bg-white rounded-xl p-3 md:p-5 shadow-sm border border-gray-100">
+          <p className="text-xs md:text-sm text-gray-500">Toplam Sipariş</p>
+          <p className="text-2xl md:text-3xl font-bold text-gray-800 mt-1">
             {filteredOrders.length}
           </p>
           <p className="text-xs text-gray-400 mt-1">Son {dateRange} gün</p>
         </div>
 
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-500">Toplam Gelir</p>
-          <p className="text-3xl font-bold text-purple-600 mt-1">
+        <div className="bg-white rounded-xl p-3 md:p-5 shadow-sm border border-gray-100">
+          <p className="text-xs md:text-sm text-gray-500">Toplam Gelir</p>
+          <p className="text-lg md:text-3xl font-bold text-purple-600 mt-1 leading-tight">
             {formatTRY(totalRevenue, 0)}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Teslim edilen siparişler</p>
+          <p className="text-xs text-gray-400 mt-1 hidden sm:block">Teslim edilen</p>
         </div>
 
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-500">Teslimat Oranı</p>
-          <p className="text-3xl font-bold text-green-600 mt-1">
+        <div className="bg-white rounded-xl p-3 md:p-5 shadow-sm border border-gray-100">
+          <p className="text-xs md:text-sm text-gray-500">Teslimat Oranı</p>
+          <p className="text-2xl md:text-3xl font-bold text-green-600 mt-1">
             %{deliveryRate}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Başarılı teslimat</p>
+          <p className="text-xs text-gray-400 mt-1 hidden sm:block">Başarılı teslimat</p>
         </div>
 
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <p className="text-sm text-gray-500">Ortalama Sipariş</p>
-          <p className="text-3xl font-bold text-orange-500 mt-1">
+        <div className="bg-white rounded-xl p-3 md:p-5 shadow-sm border border-gray-100">
+          <p className="text-xs md:text-sm text-gray-500">Ort. Sipariş</p>
+          <p className="text-lg md:text-3xl font-bold text-orange-500 mt-1 leading-tight">
             {formatTRY(avgOrderValue, 2)}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Sipariş başına</p>
+          <p className="text-xs text-gray-400 mt-1 hidden sm:block">Sipariş başına</p>
         </div>
       </div>
 

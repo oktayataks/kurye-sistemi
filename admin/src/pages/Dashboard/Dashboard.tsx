@@ -126,62 +126,63 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 md:p-6 space-y-4 md:space-y-6">
       {/* Başlık */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-        <span className="flex items-center gap-1.5 text-xs text-green-600 bg-green-50 px-3 py-1.5 rounded-full font-medium">
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-lg md:text-2xl font-bold text-gray-800">Dashboard</h1>
+        <span className="flex items-center gap-1.5 text-xs text-green-600 bg-green-50 px-2 md:px-3 py-1.5 rounded-full font-medium whitespace-nowrap">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          Canlı — her 30 sn yenilenir
+          <span className="hidden sm:inline">Canlı — her 30 sn yenilenir</span>
+          <span className="sm:hidden">Canlı</span>
         </span>
       </div>
 
       {/* ─── Üst İstatistik Kartları ─────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="bg-white rounded-xl p-3 md:p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Toplam Sipariş</p>
-              <p className="text-3xl font-bold text-gray-800">
+              <p className="text-xs md:text-sm text-gray-500">Toplam Sipariş</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-800">
                 {orders.length}
               </p>
             </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-              <span className="text-2xl">📦</span>
+            <div className="w-9 h-9 md:w-12 md:h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+              <span className="text-lg md:text-2xl">📦</span>
             </div>
           </div>
           <p className="text-xs text-green-500 mt-2">
-            Bugün: {todayOrders.length} sipariş
+            Bugün: {todayOrders.length}
           </p>
         </div>
 
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-3 md:p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Aktif Kuryeler</p>
-              <p className="text-3xl font-bold text-gray-800">
+              <p className="text-xs md:text-sm text-gray-500">Aktif Kurye</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-800">
                 {onlineCouriers.length}
               </p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-              <span className="text-2xl">🛵</span>
+            <div className="w-9 h-9 md:w-12 md:h-12 bg-green-100 rounded-xl flex items-center justify-center">
+              <span className="text-lg md:text-2xl">🛵</span>
             </div>
           </div>
           <p className="text-xs text-gray-400 mt-2">
-            Toplam: {couriers.length} kurye
+            Toplam: {couriers.length}
           </p>
         </div>
 
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-3 md:p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Toplam Gelir</p>
-              <p className="text-3xl font-bold text-gray-800">
+              <p className="text-xs md:text-sm text-gray-500">Toplam Gelir</p>
+              <p className="text-lg md:text-3xl font-bold text-gray-800 leading-tight">
                 {formatCurrency(totalRevenue)}
               </p>
             </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-              <span className="text-2xl">💰</span>
+            <div className="w-9 h-9 md:w-12 md:h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+              <span className="text-lg md:text-2xl">💰</span>
             </div>
           </div>
           <p className="text-xs text-green-500 mt-2">
@@ -189,20 +190,20 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-3 md:p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Bekleyen</p>
-              <p className="text-3xl font-bold text-gray-800">
+              <p className="text-xs md:text-sm text-gray-500">Bekleyen</p>
+              <p className="text-2xl md:text-3xl font-bold text-gray-800">
                 {pendingOrders.length}
               </p>
             </div>
-            <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-              <span className="text-2xl">⏳</span>
+            <div className="w-9 h-9 md:w-12 md:h-12 bg-red-100 rounded-xl flex items-center justify-center">
+              <span className="text-lg md:text-2xl">⏳</span>
             </div>
           </div>
           <p className="text-xs text-blue-500 mt-2">
-            Aktif: {activeOrders.length} sipariş
+            Aktif: {activeOrders.length}
           </p>
         </div>
       </div>
@@ -272,33 +273,33 @@ export default function Dashboard() {
       </div>
 
       {/* ─── Son Siparişler ────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <h2 className="text-lg font-semibold text-gray-700 mb-4">
+      <div className="bg-white rounded-xl p-3 md:p-5 shadow-sm border border-gray-100">
+        <h2 className="text-base md:text-lg font-semibold text-gray-700 mb-3 md:mb-4">
           Son Siparişler
         </h2>
         <div className="space-y-3">
           {recentOrders.map((order) => (
             <div
               key={order.id}
-              className="flex items-center justify-between py-2 border-b border-gray-50"
+              className="flex items-center justify-between py-2 border-b border-gray-50 gap-2"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <span className="text-xs font-bold text-purple-600">
                     #{order.orderNumber}
                   </span>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-800">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">
                     {order.customerName}
                   </p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-400 hidden sm:block">
                     {new Date(order.createdAt).toLocaleString('tr-TR')}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-gray-700">
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-sm font-semibold text-gray-700 hidden sm:inline">
                   {formatCurrency(Number(order.orderTotal) || 0)}
                 </span>
                 <span
@@ -332,8 +333,8 @@ export default function Dashboard() {
       </div>
 
       {/* ─── Aktif Kuryeler ────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <h2 className="text-lg font-semibold text-gray-700 mb-4">
+      <div className="bg-white rounded-xl p-3 md:p-5 shadow-sm border border-gray-100">
+        <h2 className="text-base md:text-lg font-semibold text-gray-700 mb-3 md:mb-4">
           Aktif Kuryeler
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

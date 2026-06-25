@@ -44,7 +44,7 @@ export default function LiveMapSidebar({
   onFocusOrder,
 }: LiveMapSidebarProps) {
   return (
-    <aside className="w-80 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col h-full overflow-hidden">
+    <aside className="w-full md:w-80 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col h-full overflow-hidden max-h-[60vh] md:max-h-full">
       {/* Header */}
       <div className="px-5 py-4 border-b border-gray-100 bg-gradient-to-br from-indigo-50 via-white to-white">
         <div className="flex items-center justify-between">

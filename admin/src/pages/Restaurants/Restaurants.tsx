@@ -202,7 +202,60 @@ export default function Restaurants() {
           <SkeletonTable rows={6} columns={6} />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Mobile: kart görünümü */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {filteredRestaurants.map((r) => (
+                <div key={r.id} className="p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
+                        {getInitials(r.name)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{r.name}</p>
+                        {r.user?.email && (
+                          <p className="text-xs text-gray-400 truncate">{r.user.email}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => openEdit(r)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg">
+                        <MdEdit className="text-base" />
+                      </button>
+                      <button onClick={() => setDeleteTarget(r)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
+                        <MdDelete className="text-base" />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 flex items-start gap-1">
+                    <MdLocationOn className="flex-shrink-0 mt-0.5" />
+                    {r.address}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    {r.phone && (
+                      <p className="text-xs text-gray-500 flex items-center gap-1">
+                        <MdPhone className="flex-shrink-0" />
+                        {r.phone}
+                      </p>
+                    )}
+                    <StatusToggle
+                      isActive={r.isActive}
+                      disabled={toggleStatusMutation.isPending}
+                      onChange={() => handleToggleStatus(r)}
+                    />
+                  </div>
+                </div>
+              ))}
+              {filteredRestaurants.length === 0 && (
+                <div className="py-12 text-center text-gray-400">
+                  <MdStorefront className="mx-auto text-4xl text-gray-300 mb-2" />
+                  <p className="text-sm">{search ? 'Aramayla eşleşen restoran bulunamadı' : 'Henüz restoran yok'}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop: tablo */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
@@ -310,6 +363,8 @@ export default function Restaurants() {
                   )}
                 </tbody>
               </table>
+            </div>
+
             </div>
 
             {/* Pagination */}
