@@ -104,6 +104,26 @@ export default function Couriers() {
     },
   });
 
+  const existingUserMutation = useMutation({
+    mutationFn: (payload: {
+      userId: string;
+      vehicleType?: string;
+      latitude?: number | null;
+      longitude?: number | null;
+    }) => couriersApi.create(payload).then((r) => r.data),
+    onSuccess: () => {
+      toast.success('Kurye profili oluşturuldu');
+      queryClient.invalidateQueries({ queryKey: ['couriers'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setModalOpen(false);
+      setEditingCourier(null);
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message;
+      toast.error(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Kurye oluşturulamadı');
+    },
+  });
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Courier> }) =>
       couriersApi.update(id, data),
@@ -177,7 +197,6 @@ export default function Couriers() {
 
   const handleSubmit = (form: CourierFormData) => {
     if (editingCourier) {
-      // Edit modunda sadece kurye profili alanları gönderilir
       const updatePayload: Partial<Courier> = {
         vehicleType: form.vehicleType,
         latitude: form.latitude ?? undefined,
@@ -188,7 +207,18 @@ export default function Couriers() {
       return;
     }
 
-    // Create modunda User + Courier birlikte oluşturulur
+    // Mevcut kullanıcıya kurye profili ekle
+    if (form.userId) {
+      existingUserMutation.mutate({
+        userId: form.userId,
+        vehicleType: form.vehicleType,
+        latitude: form.latitude ?? null,
+        longitude: form.longitude ?? null,
+      });
+      return;
+    }
+
+    // Yeni User + Courier birlikte oluştur
     if (!form.email || !form.fullName || !form.password) {
       toast.error('Email, ad soyad ve şifre zorunludur');
       return;
@@ -521,7 +551,7 @@ export default function Couriers() {
         isOpen={modalOpen}
         mode={editingCourier ? 'edit' : 'create'}
         courier={editingCourier}
-        isSubmitting={createMutation.isPending || updateMutation.isPending}
+        isSubmitting={createMutation.isPending || updateMutation.isPending || existingUserMutation.isPending}
         onClose={closeModal}
         onSubmit={handleSubmit}
       />

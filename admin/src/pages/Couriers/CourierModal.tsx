@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import {
   MdClose,
   MdDeliveryDining,
@@ -13,8 +14,9 @@ import {
   MdVisibility,
   MdVisibilityOff,
 } from 'react-icons/md';
-import type { Courier, VehicleType } from '../../types';
+import type { Courier, PaginatedResult, User, VehicleType } from '../../types';
 import { VEHICLE_LABELS } from '../../utils/helpers';
+import { usersApi, couriersApi } from '../../services/api';
 
 // ─── Form veri tipi ──────────────────────────────────────────────────────────
 
@@ -25,6 +27,9 @@ export interface CourierFormData {
   phone?: string;
   password?: string;
   autoPassword?: boolean;
+
+  // Mevcut kullanıcı modu
+  userId?: string;
 
   // Hem create hem edit modu
   vehicleType: VehicleType;
@@ -78,6 +83,8 @@ export default function CourierModal({
 }: CourierModalProps) {
   const isEdit = mode === 'edit';
   const [showPassword, setShowPassword] = useState(false);
+  const [createMode, setCreateMode] = useState<'new' | 'existing'>('new');
+  const [selectedUserId, setSelectedUserId] = useState('');
 
   const {
     register,
@@ -93,9 +100,32 @@ export default function CourierModal({
   const isOnline = watch('isOnline');
   const autoPassword = watch('autoPassword');
 
+  // Mevcut kullanıcı modunda: kurye kaydı olmayan kullanıcıları çek
+  const { data: allUsers } = useQuery({
+    queryKey: ['users-for-courier'],
+    queryFn: () => usersApi.getAll().then((r) => r.data as User[]),
+    enabled: isOpen && !isEdit && createMode === 'existing',
+  });
+
+  const { data: allCouriersData } = useQuery({
+    queryKey: ['couriers-for-modal'],
+    queryFn: () =>
+      couriersApi.getAll({ limit: 200 }).then((r) => r.data as PaginatedResult<Courier>),
+    enabled: isOpen && !isEdit && createMode === 'existing',
+  });
+
+  const courierUserIds = new Set(
+    (allCouriersData?.data ?? []).map((c) => c.userId),
+  );
+  const availableUsers = (allUsers ?? []).filter(
+    (u) => !courierUserIds.has(u.id),
+  );
+
   useEffect(() => {
     if (!isOpen) return;
     setShowPassword(false);
+    setCreateMode('new');
+    setSelectedUserId('');
     if (isEdit && courier) {
       reset({
         vehicleType: courier.vehicleType,
@@ -136,7 +166,6 @@ export default function CourierModal({
         : Number(data.longitude);
 
     if (isEdit) {
-      // Edit modunda sadece kurye profili alanları güncellenir
       onSubmit({
         vehicleType: data.vehicleType,
         latitude: lat,
@@ -146,7 +175,19 @@ export default function CourierModal({
       return;
     }
 
-    // Create: User + Courier birlikte oluşturulur
+    // Mevcut kullanıcı modu
+    if (createMode === 'existing') {
+      if (!selectedUserId) return;
+      onSubmit({
+        userId: selectedUserId,
+        vehicleType: data.vehicleType,
+        latitude: lat,
+        longitude: lng,
+      });
+      return;
+    }
+
+    // Yeni kullanıcı modu
     const finalPassword = data.autoPassword
       ? generatePassword()
       : (data.password ?? '').trim();
@@ -205,8 +246,71 @@ export default function CourierModal({
           className="flex-1 overflow-y-auto"
         >
           <div className="p-6 space-y-4">
-            {/* Yeni kurye için kişisel bilgiler */}
+            {/* Create modu: Yeni / Mevcut toggle */}
             {!isEdit && (
+              <div className="flex gap-1.5 bg-gray-100 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => { setCreateMode('new'); setSelectedUserId(''); }}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    createMode === 'new'
+                      ? 'bg-white shadow-sm text-indigo-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  ➕ Yeni Kullanıcı
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreateMode('existing')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    createMode === 'existing'
+                      ? 'bg-white shadow-sm text-indigo-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  👤 Mevcut Kullanıcı
+                </button>
+              </div>
+            )}
+
+            {/* Mevcut kullanıcı modu */}
+            {!isEdit && createMode === 'existing' && (
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                  <MdPerson className="text-gray-400 text-lg" />
+                  Kullanıcı Seç
+                  <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                  disabled={isSubmitting}
+                  required
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 disabled:bg-gray-50"
+                >
+                  <option value="">-- Kullanıcı seçin --</option>
+                  {availableUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.fullName} ({u.email})
+                    </option>
+                  ))}
+                </select>
+                {availableUsers.length === 0 && allUsers !== undefined && (
+                  <p className="text-xs text-amber-600 mt-1.5 bg-amber-50 px-2 py-1.5 rounded-lg">
+                    Tüm kullanıcıların zaten kurye kaydı var.
+                  </p>
+                )}
+                {!selectedUserId && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Sadece kurye kaydı olmayan kullanıcılar listeleniyor.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Yeni kurye için kişisel bilgiler */}
+            {!isEdit && createMode === 'new' && (
               <>
                 {/* Ad Soyad */}
                 <FormField
@@ -501,7 +605,7 @@ export default function CourierModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || (!isEdit && createMode === 'existing' && !selectedUserId)}
               className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting && (
