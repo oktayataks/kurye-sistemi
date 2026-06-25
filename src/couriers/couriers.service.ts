@@ -116,10 +116,15 @@ export class CouriersService {
   }
 
   async findByUserId(userId: string) {
-    return this.courierRepository.findOne({
-      where: { user: { id: userId } },
+    console.log('🔍 findByUserId çağrıldı:', userId);
+
+    const courier = await this.courierRepository.findOne({
+      where: { userId },
       relations: ['user'],
     });
+
+    console.log('🔍 Bulunan courier:', courier?.id);
+    return courier;
   }
 
   async findOne(id: string): Promise<Courier> {
