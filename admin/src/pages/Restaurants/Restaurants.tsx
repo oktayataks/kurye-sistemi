@@ -365,8 +365,6 @@ export default function Restaurants() {
               </table>
             </div>
 
-            </div>
-
             {/* Pagination */}
             {meta && meta.totalPages > 1 && (
               <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
