@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, forwardRef, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order, OrderStatus } from './order.entity';
@@ -6,6 +6,7 @@ import { Courier } from '../couriers/courier.entity';
 import { Restaurant } from '../restaurants/restaurant.entity';
 import { Cron } from '@nestjs/schedule';
 import { NotificationsService } from '../notifications/notifications.service';
+import { OrdersService } from './orders.service';
 
 @Injectable()
 export class MockOrdersService {
@@ -17,6 +18,8 @@ export class MockOrdersService {
     @InjectRepository(Restaurant)
     private restaurantsRepository: Repository<Restaurant>,
     private notificationsService: NotificationsService,
+    @Inject(forwardRef(() => OrdersService))
+    private ordersService: OrdersService,
   ) {}
 
   private mockCustomers = [
@@ -78,13 +81,13 @@ export class MockOrdersService {
       const saved = await this.ordersRepository.save(order);
       console.log(`✅ Mock sipariş oluşturuldu: #${saved.orderNumber} - ${customer.name}`);
 
+      // Online kuryelere yeni sipariş bildirimi gönder
       const onlineCouriers = await this.couriersRepository.find({
         where: { isOnline: true },
       });
       const tokens = onlineCouriers
         .filter((c) => c.fcmToken)
         .map((c) => c.fcmToken);
-
       if (tokens.length > 0) {
         await this.notificationsService.sendNewOrderNotification(
           tokens,
@@ -92,6 +95,9 @@ export class MockOrdersService {
           saved.id,
         );
       }
+
+      // Otomatik kurye atama
+      await this.ordersService.autoAssignCourier(saved.id);
 
     } catch (error) {
       console.error('Mock sipariş oluşturulamadı:', error);

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
@@ -15,7 +15,11 @@ import { NotificationsModule } from '../notifications/notifications.module';
     NotificationsModule,
   ],
   controllers: [OrdersController],
-  providers: [OrdersService, AssignmentService, MockOrdersService],
+  providers: [
+    OrdersService,
+    AssignmentService,
+    MockOrdersService,
+  ],
   exports: [OrdersService, AssignmentService],
 })
 export class OrdersModule {}

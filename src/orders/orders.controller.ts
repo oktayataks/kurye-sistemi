@@ -131,6 +131,20 @@ export class OrdersController {
     return this.ordersService.acceptOrder(id, req.user.id);
   }
 
+  @Post(':id/auto-assign')
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Siparişe otomatik kurye ata (Admin)' })
+  @ApiResponse({ status: 200, description: 'En yakın müsait kurye atandı' })
+  @ApiResponse({ status: 404, description: 'Müsait kurye bulunamadı' })
+  async autoAssign(@Param('id') id: string) {
+    const result = await this.ordersService.autoAssignCourier(id);
+    if (!result) {
+      return { message: 'Müsait online kurye bulunamadı veya sipariş pending değil' };
+    }
+    return { message: 'Kurye atandı', courier: result };
+  }
+
   @Delete(':id')
   @Roles(UserRole.ADMIN, UserRole.RESTAURANT)
   @HttpCode(HttpStatus.OK)

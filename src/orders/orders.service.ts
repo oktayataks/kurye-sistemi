@@ -6,7 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { IsNull, LessThanOrEqual, Repository } from 'typeorm';
 import { Order, OrderStatus } from './order.entity';
 import { Courier } from '../couriers/courier.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -14,6 +14,7 @@ import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { UserRole, User } from '../users/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class OrdersService {
@@ -22,6 +23,7 @@ export class OrdersService {
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(Courier)
     private readonly couriersRepository: Repository<Courier>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
@@ -206,6 +208,84 @@ export class OrdersService {
     await this.orderRepository.save(order);
 
     return order;
+  }
+
+  async autoAssignCourier(orderId: string) {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['restaurant'],
+    });
+
+    if (!order || order.status !== OrderStatus.PENDING) return null;
+
+    const couriers = await this.couriersRepository.find({
+      where: { isOnline: true, currentOrders: LessThanOrEqual(0) },
+      relations: ['user'],
+    });
+
+    if (couriers.length === 0) {
+      console.log('❌ Müsait kurye yok');
+      return null;
+    }
+
+    const calculateDistance = (
+      lat1: number, lon1: number,
+      lat2: number, lon2: number,
+    ): number => {
+      if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
+      const R = 6371;
+      const dLat = ((lat2 - lat1) * Math.PI) / 180;
+      const dLon = ((lon2 - lon1) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) *
+          Math.cos((lat2 * Math.PI) / 180) *
+          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    const targetLat = Number(order.restaurant?.latitude ?? order.deliveryLatitude);
+    const targetLng = Number(order.restaurant?.longitude ?? order.deliveryLongitude);
+
+    let nearestCourier: Courier | null = null;
+    let minDistance = Infinity;
+
+    for (const courier of couriers) {
+      if (!courier.latitude || !courier.longitude) continue;
+      const dist = calculateDistance(
+        Number(courier.latitude), Number(courier.longitude),
+        targetLat, targetLng,
+      );
+      if (dist < minDistance) {
+        minDistance = dist;
+        nearestCourier = courier;
+      }
+    }
+
+    // Konum bilgisi olmayan kuryeler varsa ilkini seç
+    if (!nearestCourier) nearestCourier = couriers[0];
+
+    order.courierId = nearestCourier.id;
+    order.status = OrderStatus.ASSIGNED;
+    order.assignedAt = new Date();
+    await this.orderRepository.save(order);
+
+    nearestCourier.currentOrders = (nearestCourier.currentOrders || 0) + 1;
+    await this.couriersRepository.save(nearestCourier);
+
+    console.log(
+      `✅ Otomatik atama: Sipariş #${order.orderNumber} → ${nearestCourier.user?.fullName} (${isFinite(minDistance) ? minDistance.toFixed(2) + ' km' : 'konum yok'})`,
+    );
+
+    if (nearestCourier.fcmToken) {
+      await this.notificationsService.sendNewOrderNotification(
+        [nearestCourier.fcmToken],
+        String(order.orderNumber),
+        order.id,
+      );
+    }
+
+    return nearestCourier;
   }
 
   private validateStatusTransition(
