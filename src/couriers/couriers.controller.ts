@@ -81,8 +81,8 @@ export class CouriersController {
   @ApiOperation({ summary: 'Kurye kendi profil bilgisini getir' })
   @ApiResponse({ status: 200, description: 'Kurye profili' })
   async getMyProfile(@Request() req) {
-    console.log('🔍 getMyProfile çağrıldı, userId:', req.user.sub);
-    return this.couriersService.findByUserId(req.user.sub);
+    console.log('🔍 getMyProfile çağrıldı, user:', req.user);
+    return this.couriersService.findByUserId(req.user.id);
   }
 
   @Get(':id')

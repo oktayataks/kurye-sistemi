@@ -77,7 +77,7 @@ export class OrdersController {
   @ApiOperation({ summary: 'Kuryenin kendi siparişlerini listele' })
   @ApiResponse({ status: 200, description: 'Kurye sipariş listesi' })
   async getMyCourierOrders(@Request() req) {
-    return this.ordersService.getMyCourierOrders(req.user.sub);
+    return this.ordersService.getMyCourierOrders(req.user.id);
   }
 
   @Get(':id')
@@ -128,7 +128,7 @@ export class OrdersController {
     @Param('id') id: string,
     @Request() req,
   ) {
-    return this.ordersService.acceptOrder(id, req.user.sub);
+    return this.ordersService.acceptOrder(id, req.user.id);
   }
 
   @Delete(':id')

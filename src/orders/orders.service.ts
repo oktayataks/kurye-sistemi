@@ -162,7 +162,7 @@ export class OrdersService {
 
   async getMyCourierOrders(userId: string) {
     const courier = await this.couriersRepository.findOne({
-      where: { user: { id: userId } },
+      where: { userId },
     });
 
     if (!courier) return [];
@@ -180,7 +180,7 @@ export class OrdersService {
 
   async acceptOrder(orderId: string, userId: string) {
     const courier = await this.couriersRepository.findOne({
-      where: { user: { id: userId } },
+      where: { userId },
     });
 
     if (!courier) {
