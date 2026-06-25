@@ -82,8 +82,6 @@ export default function Couriers() {
       password: string;
       phone?: string;
       vehicleType?: string;
-      latitude?: number | null;
-      longitude?: number | null;
     }) => couriersApi.createWithUser(payload).then((r) => r.data),
     onSuccess: (_data, variables) => {
       toast.success('Kurye başarıyla oluşturuldu');
@@ -108,8 +106,6 @@ export default function Couriers() {
     mutationFn: (payload: {
       userId: string;
       vehicleType?: string;
-      latitude?: number | null;
-      longitude?: number | null;
     }) => couriersApi.create(payload).then((r) => r.data),
     onSuccess: () => {
       toast.success('Kurye profili oluşturuldu');
@@ -199,8 +195,6 @@ export default function Couriers() {
     if (editingCourier) {
       const updatePayload: Partial<Courier> = {
         vehicleType: form.vehicleType,
-        latitude: form.latitude ?? undefined,
-        longitude: form.longitude ?? undefined,
         isOnline: form.isOnline,
       };
       updateMutation.mutate({ id: editingCourier.id, data: updatePayload });
@@ -212,8 +206,6 @@ export default function Couriers() {
       existingUserMutation.mutate({
         userId: form.userId,
         vehicleType: form.vehicleType,
-        latitude: form.latitude ?? null,
-        longitude: form.longitude ?? null,
       });
       return;
     }
@@ -229,8 +221,6 @@ export default function Couriers() {
       password: form.password,
       phone: form.phone,
       vehicleType: form.vehicleType,
-      latitude: form.latitude ?? null,
-      longitude: form.longitude ?? null,
     });
   };
 

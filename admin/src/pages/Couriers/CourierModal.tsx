@@ -8,7 +8,6 @@ import {
   MdEmail,
   MdLock,
   MdPhone,
-  MdMyLocation,
   MdDirectionsBike,
   MdAutorenew,
   MdVisibility,
@@ -33,8 +32,6 @@ export interface CourierFormData {
 
   // Hem create hem edit modu
   vehicleType: VehicleType;
-  latitude?: number | null;
-  longitude?: number | null;
   isOnline?: boolean;
 }
 
@@ -56,8 +53,6 @@ const EMPTY_FORM: CourierFormData = {
   password: '',
   autoPassword: true,
   vehicleType: 'motorbike',
-  latitude: null,
-  longitude: null,
   isOnline: false,
 };
 
@@ -118,7 +113,7 @@ export default function CourierModal({
     (allCouriersData?.data ?? []).map((c) => c.userId),
   );
   const availableUsers = (allUsers ?? []).filter(
-    (u) => !courierUserIds.has(u.id),
+    (u) => u.role === 'courier' && !courierUserIds.has(u.id),
   );
 
   useEffect(() => {
@@ -129,8 +124,6 @@ export default function CourierModal({
     if (isEdit && courier) {
       reset({
         vehicleType: courier.vehicleType,
-        latitude: courier.latitude ?? null,
-        longitude: courier.longitude ?? null,
         isOnline: courier.isOnline,
       });
     } else {
@@ -154,22 +147,9 @@ export default function CourierModal({
   };
 
   const submitHandler = (data: CourierFormData) => {
-    const lat =
-      data.latitude === null || data.latitude === undefined || isNaN(Number(data.latitude))
-        ? null
-        : Number(data.latitude);
-    const lng =
-      data.longitude === null ||
-      data.longitude === undefined ||
-      isNaN(Number(data.longitude))
-        ? null
-        : Number(data.longitude);
-
     if (isEdit) {
       onSubmit({
         vehicleType: data.vehicleType,
-        latitude: lat,
-        longitude: lng,
         isOnline: !!data.isOnline,
       });
       return;
@@ -181,8 +161,6 @@ export default function CourierModal({
       onSubmit({
         userId: selectedUserId,
         vehicleType: data.vehicleType,
-        latitude: lat,
-        longitude: lng,
       });
       return;
     }
@@ -199,8 +177,6 @@ export default function CourierModal({
       password: finalPassword,
       autoPassword: data.autoPassword,
       vehicleType: data.vehicleType,
-      latitude: lat,
-      longitude: lng,
     });
   };
 
@@ -499,72 +475,6 @@ export default function CourierModal({
                 ))}
               </div>
             </FormField>
-
-            {/* Konum */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
-                <MdMyLocation className="text-gray-400" />
-                Konum (Koordinat)
-                <span className="text-xs text-gray-400 font-normal ml-1">
-                  (opsiyonel)
-                </span>
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder="Enlem (lat)"
-                    disabled={isSubmitting}
-                    className={inputClass(!!errors.latitude)}
-                    {...register('latitude', {
-                      valueAsNumber: true,
-                      validate: (v) => {
-                        if (v === null || v === undefined || isNaN(Number(v)))
-                          return true;
-                        const n = Number(v);
-                        if (n < -90 || n > 90)
-                          return 'Enlem -90 ile 90 arasında olmalıdır';
-                        return true;
-                      },
-                    })}
-                  />
-                  {errors.latitude?.message && (
-                    <p className="mt-1 text-xs text-red-600">
-                      ⚠ {errors.latitude.message}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder="Boylam (lng)"
-                    disabled={isSubmitting}
-                    className={inputClass(!!errors.longitude)}
-                    {...register('longitude', {
-                      valueAsNumber: true,
-                      validate: (v) => {
-                        if (v === null || v === undefined || isNaN(Number(v)))
-                          return true;
-                        const n = Number(v);
-                        if (n < -180 || n > 180)
-                          return 'Boylam -180 ile 180 arasında olmalıdır';
-                        return true;
-                      },
-                    })}
-                  />
-                  {errors.longitude?.message && (
-                    <p className="mt-1 text-xs text-red-600">
-                      ⚠ {errors.longitude.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-gray-400 mt-1.5">
-                Otomatik sipariş atama için konum kullanılır.
-              </p>
-            </div>
 
             {/* Online/Offline switch (sadece edit'te) */}
             {isEdit && (
