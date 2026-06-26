@@ -10,7 +10,7 @@ import {
   Request,
   Query,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CustomersService } from './customers.service';
 
 @Controller('customers')
