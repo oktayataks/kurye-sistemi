@@ -8,6 +8,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Exclude } from 'class-transformer';
 import { Courier } from '../couriers/courier.entity';
 import { Restaurant } from '../restaurants/restaurant.entity';
 
@@ -27,6 +28,7 @@ export class User {
   email: string;
 
   @Column()
+  @Exclude({ toPlainOnly: true })
   password: string;
 
   @Column()
