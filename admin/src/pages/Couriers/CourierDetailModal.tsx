@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { MdClose, MdPhone, MdEmail, MdDeliveryDining } from 'react-icons/md';
-import type { Courier, Order, PaginatedResult } from '../../types';
+import type { Courier, Order } from '../../types';
 import { ordersApi } from '../../services/api';
 import { VEHICLE_LABELS } from '../../utils/helpers';
 
@@ -12,16 +12,18 @@ interface Props {
 const VEHICLE_ICONS: Record<string, string> = { bike: '🚲', motorbike: '🛵', car: '🚗' };
 
 export default function CourierDetailModal({ courier, onClose }: Props) {
-  const { data: ordersData } = useQuery({
-    queryKey: ['courier-orders-detail', courier.id],
-    queryFn: () =>
-      ordersApi
-        .getAll({ page: 1, limit: 200, courierId: courier.id } as any)
-        .then((r) => r.data as PaginatedResult<Order>),
+  const { data: allOrders = [] } = useQuery<Order[]>({
+    queryKey: ['courier-orders', courier.id],
+    queryFn: async () => {
+      const res = await ordersApi.getAll({
+        courierId: courier.id,
+        limit: 100,
+      } as any);
+      const data = Array.isArray(res.data) ? res.data : (res.data as any)?.data || [];
+      return data.filter((o: Order) => o.courierId === courier.id);
+    },
     enabled: !!courier.id,
   });
-
-  const allOrders: Order[] = ordersData?.data ?? [];
   const activeOrders = allOrders.filter(
     (o) => o.status === 'assigned' || o.status === 'picked_up',
   );

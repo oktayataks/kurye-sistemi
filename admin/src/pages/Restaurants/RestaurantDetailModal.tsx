@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { MdClose, MdPhone, MdLocationOn, MdStore } from 'react-icons/md';
-import type { Restaurant, Order, PaginatedResult } from '../../types';
+import type { Restaurant, Order } from '../../types';
 import { ordersApi } from '../../services/api';
 
 interface Props {
@@ -9,16 +9,18 @@ interface Props {
 }
 
 export default function RestaurantDetailModal({ restaurant, onClose }: Props) {
-  const { data: ordersData } = useQuery({
-    queryKey: ['restaurant-orders-detail', restaurant.id],
-    queryFn: () =>
-      ordersApi
-        .getAll({ page: 1, limit: 200, restaurantId: restaurant.id } as any)
-        .then((r) => r.data as PaginatedResult<Order>),
+  const { data: allOrders = [] } = useQuery<Order[]>({
+    queryKey: ['restaurant-orders', restaurant.id],
+    queryFn: async () => {
+      const res = await ordersApi.getAll({
+        restaurantId: restaurant.id,
+        limit: 100,
+      } as any);
+      const data = Array.isArray(res.data) ? res.data : (res.data as any)?.data || [];
+      return data.filter((o: Order) => o.restaurantId === restaurant.id);
+    },
     enabled: !!restaurant.id,
   });
-
-  const allOrders: Order[] = ordersData?.data ?? [];
   const activeOrders = allOrders.filter(
     (o) => o.status === 'pending' || o.status === 'assigned' || o.status === 'picked_up',
   );
