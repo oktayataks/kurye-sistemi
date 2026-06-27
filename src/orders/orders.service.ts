@@ -14,6 +14,8 @@ import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { UserRole, User } from '../users/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -21,6 +23,7 @@ export class OrdersService {
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(Courier)
     private readonly couriersRepository: Repository<Courier>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
@@ -205,6 +208,172 @@ export class OrdersService {
     await this.orderRepository.save(order);
 
     return order;
+  }
+
+  // ─── Teklif sistemi ────────────────────────────────────────────────────────
+
+  async offerOrderToCourier(orderId: string) {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['restaurant'],
+    });
+
+    if (!order || order.status !== 'pending') return null;
+
+    const rejectedIds: string[] = order.rejectedCourierIds ?? [];
+    const now = new Date();
+
+    const couriers = await this.couriersRepository.find({
+      where: { isOnline: true, currentOrders: 0 },
+      relations: ['user'],
+    });
+
+    const available = couriers.filter(
+      (c) =>
+        !rejectedIds.includes(c.id) &&
+        (!c.breakUntil || new Date(c.breakUntil) <= now),
+    );
+
+    if (available.length === 0) {
+      console.log(`📭 #${order.orderNumber} için müsait kurye yok`);
+      return null;
+    }
+
+    const targetLat = order.restaurant?.latitude ?? order.deliveryLatitude;
+    const targetLng = order.restaurant?.longitude ?? order.deliveryLongitude;
+
+    const scored = available.map((c) => {
+      let distance = Infinity;
+      if (c.latitude && c.longitude && targetLat && targetLng) {
+        distance = this.calculateDistance(
+          parseFloat(c.latitude as any),
+          parseFloat(c.longitude as any),
+          parseFloat(targetLat as any),
+          parseFloat(targetLng as any),
+        );
+      }
+      return { courier: c, distance };
+    });
+
+    scored.sort((a, b) => a.distance - b.distance);
+    const selected = scored[0].courier;
+
+    order.offeredCourierId = selected.id;
+    order.offeredAt = new Date();
+    await this.orderRepository.save(order);
+
+    selected.totalOffered += 1;
+    selected.lastOfferAt = new Date();
+    await this.couriersRepository.save(selected);
+
+    console.log(
+      `📤 #${order.orderNumber} → ${selected.user?.fullName} (${scored[0].distance === Infinity ? '?' : scored[0].distance.toFixed(2)} km)`,
+    );
+
+    if (selected.fcmToken) {
+      await this.notificationsService.sendNewOrderNotification(
+        [selected.fcmToken],
+        String(order.orderNumber),
+        order.id,
+      );
+    }
+
+    return { courier: selected, order };
+  }
+
+  async acceptOffer(orderId: string, courierId: string) {
+    const order = await this.orderRepository.findOne({ where: { id: orderId } });
+
+    if (!order || order.offeredCourierId !== courierId) {
+      throw new ForbiddenException('Bu sipariş size teklif edilmedi');
+    }
+
+    const offeredAt = new Date(order.offeredAt).getTime();
+    if (Date.now() - offeredAt > 30000) {
+      return this.rejectOffer(orderId, courierId, true);
+    }
+
+    order.courierId = courierId;
+    order.status = OrderStatus.ASSIGNED;
+    order.assignedAt = new Date();
+    order.offeredCourierId = null;
+    order.offeredAt = null;
+    await this.orderRepository.save(order);
+
+    const courier = await this.couriersRepository.findOne({ where: { id: courierId } });
+    if (courier) {
+      courier.totalAccepted += 1;
+      courier.currentOrders += 1;
+      courier.acceptanceRate = this.calculateRate(courier.totalAccepted, courier.totalRejected);
+      await this.couriersRepository.save(courier);
+    }
+
+    return order;
+  }
+
+  async rejectOffer(orderId: string, courierId: string, isTimeout = false) {
+    const order = await this.orderRepository.findOne({ where: { id: orderId } });
+    if (!order) return null;
+
+    const rejected: string[] = order.rejectedCourierIds ?? [];
+    if (!rejected.includes(courierId)) rejected.push(courierId);
+    order.rejectedCourierIds = rejected;
+    order.offeredCourierId = null;
+    order.offeredAt = null;
+    await this.orderRepository.save(order);
+
+    const courier = await this.couriersRepository.findOne({ where: { id: courierId } });
+    if (courier) {
+      courier.totalRejected += 1;
+      courier.acceptanceRate = this.calculateRate(courier.totalAccepted, courier.totalRejected);
+      await this.couriersRepository.save(courier);
+    }
+
+    console.log(
+      `${isTimeout ? '⏰ Zaman aşımı' : '❌ Red'}: #${order.orderNumber} → yeni kurye aranıyor`,
+    );
+    setTimeout(() => this.offerOrderToCourier(orderId), 1000);
+    return order;
+  }
+
+  async getOfferedOrderForCourier(userId: string) {
+    const courier = await this.couriersRepository.findOne({ where: { userId } });
+    if (!courier) return null;
+
+    return this.orderRepository.findOne({
+      where: { offeredCourierId: courier.id, status: OrderStatus.PENDING },
+      relations: ['restaurant'],
+    });
+  }
+
+  async acceptOfferByUserId(orderId: string, userId: string) {
+    const courier = await this.couriersRepository.findOne({ where: { userId } });
+    if (!courier) throw new ForbiddenException('Kurye profili bulunamadı');
+    return this.acceptOffer(orderId, courier.id);
+  }
+
+  async rejectOfferByUserId(orderId: string, userId: string) {
+    const courier = await this.couriersRepository.findOne({ where: { userId } });
+    if (!courier) throw new ForbiddenException('Kurye profili bulunamadı');
+    return this.rejectOffer(orderId, courier.id);
+  }
+
+  private calculateRate(accepted: number, rejected: number): number {
+    const total = accepted + rejected;
+    if (total === 0) return 100;
+    return parseFloat(((accepted / total) * 100).toFixed(2));
+  }
+
+  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
   private validateStatusTransition(

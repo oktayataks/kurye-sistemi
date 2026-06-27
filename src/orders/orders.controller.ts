@@ -131,6 +131,32 @@ export class OrdersController {
     return this.ordersService.acceptOrder(id, req.user.id);
   }
 
+  @Get('offered/me')
+  @Roles(UserRole.COURIER)
+  @ApiOperation({ summary: 'Kuryeye teklif edilen aktif siparişi getir' })
+  @ApiResponse({ status: 200, description: 'Teklif edilen sipariş' })
+  async getOfferedOrder(@Request() req) {
+    return this.ordersService.getOfferedOrderForCourier(req.user.id);
+  }
+
+  @Post(':id/accept-offer')
+  @Roles(UserRole.COURIER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Teklif edilen siparişi kabul et' })
+  @ApiResponse({ status: 200, description: 'Sipariş kabul edildi' })
+  async acceptOffer(@Param('id') id: string, @Request() req) {
+    return this.ordersService.acceptOfferByUserId(id, req.user.id);
+  }
+
+  @Post(':id/reject-offer')
+  @Roles(UserRole.COURIER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Teklif edilen siparişi reddet' })
+  @ApiResponse({ status: 200, description: 'Sipariş reddedildi, bir sonraki kuryeye teklif edildi' })
+  async rejectOffer(@Param('id') id: string, @Request() req) {
+    return this.ordersService.rejectOfferByUserId(id, req.user.id);
+  }
+
   @Delete(':id')
   @Roles(UserRole.ADMIN, UserRole.RESTAURANT)
   @HttpCode(HttpStatus.OK)

@@ -50,6 +50,24 @@ export class Courier {
   @Column({ nullable: true })
   fcmToken: string;
 
+  @Column({ type: 'int', default: 0 })
+  totalOffered: number;
+
+  @Column({ type: 'int', default: 0 })
+  totalAccepted: number;
+
+  @Column({ type: 'int', default: 0 })
+  totalRejected: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, default: 100.0 })
+  acceptanceRate: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastOfferAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  breakUntil: Date;
+
   @OneToOne(() => User, (user) => user.courier)
   @JoinColumn({ name: 'userId' })
   user: User;

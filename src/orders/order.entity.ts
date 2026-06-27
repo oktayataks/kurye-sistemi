@@ -72,6 +72,15 @@ export class Order {
   @IsOptional()
   notes: string;
 
+  @Column({ nullable: true, type: 'uuid' })
+  offeredCourierId: string;
+
+  @Column({ nullable: true, type: 'timestamp' })
+  offeredAt: Date;
+
+  @Column({ type: 'simple-array', nullable: true })
+  rejectedCourierIds: string[];
+
   @Column({ nullable: true, type: 'timestamp' })
   assignedAt: Date;
 

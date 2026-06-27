@@ -181,6 +181,39 @@ export class CouriersService {
     return { success: true };
   }
 
+  async startBreak(userId: string, minutes: number) {
+    const courier = await this.courierRepository.findOne({ where: { userId } });
+    if (!courier) throw new NotFoundException('Kurye bulunamadı');
+
+    const breakUntil = new Date();
+    breakUntil.setMinutes(breakUntil.getMinutes() + minutes);
+
+    courier.breakUntil = breakUntil;
+    courier.isOnline = false;
+    await this.courierRepository.save(courier);
+
+    return { success: true, breakUntil };
+  }
+
+  async endBreak(userId: string) {
+    const courier = await this.courierRepository.findOne({ where: { userId } });
+    if (!courier) throw new NotFoundException('Kurye bulunamadı');
+
+    if (courier.breakUntil && new Date(courier.breakUntil) > new Date()) {
+      return {
+        success: false,
+        message: 'Mola süresi henüz bitmedi',
+        breakUntil: courier.breakUntil,
+      };
+    }
+
+    courier.breakUntil = null;
+    courier.isOnline = true;
+    await this.courierRepository.save(courier);
+
+    return { success: true };
+  }
+
   async remove(id: string): Promise<{ message: string }> {
     try {
       const courier = await this.findOne(id);

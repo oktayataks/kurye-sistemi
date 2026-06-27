@@ -138,6 +138,22 @@ export class CouriersController {
     return this.couriersService.updateStatus(id, statusDto);
   }
 
+  @Post('me/break')
+  @Roles(UserRole.COURIER)
+  @ApiOperation({ summary: 'Mola başlat' })
+  @ApiResponse({ status: 201, description: 'Mola başlatıldı' })
+  async startBreak(@Request() req, @Body() body: { minutes: number }) {
+    return this.couriersService.startBreak(req.user.id, body.minutes);
+  }
+
+  @Post('me/break/end')
+  @Roles(UserRole.COURIER)
+  @ApiOperation({ summary: 'Molayı bitir' })
+  @ApiResponse({ status: 201, description: 'Mola sonlandırıldı' })
+  async endBreak(@Request() req) {
+    return this.couriersService.endBreak(req.user.id);
+  }
+
   @Delete(':id')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Kurye sil (Admin)' })

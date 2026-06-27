@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { Order, OrderStatus } from './order.entity';
 import { Courier } from '../couriers/courier.entity';
 import { Restaurant } from '../restaurants/restaurant.entity';
-import { Cron } from '@nestjs/schedule';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
@@ -48,7 +47,7 @@ export class MockOrdersService {
     'Manuel',
   ];
 
-  @Cron('*/2 * * * *')
+  // @Cron('*/2 * * * *') — otomatik üretim devre dışı, manuel tetikleme için generateSingleOrder kullan
   async generateMockOrder() {
     try {
       const restaurants = await this.restaurantsRepository.find();
