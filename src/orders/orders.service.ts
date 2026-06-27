@@ -256,29 +256,39 @@ export class OrdersService {
     });
 
     scored.sort((a, b) => a.distance - b.distance);
-    const selected = scored[0].courier;
+    const selected = scored[0];
 
-    order.offeredCourierId = selected.id;
+    const MAX_DISTANCE_KM = 5;
+    if (selected.distance > MAX_DISTANCE_KM) {
+      console.log(
+        `⚠️ #${order.orderNumber} için en yakın kurye ${selected.distance.toFixed(2)} km uzakta (limit: ${MAX_DISTANCE_KM} km)`,
+      );
+      return null;
+    }
+
+    const selectedCourier = selected.courier;
+
+    order.offeredCourierId = selectedCourier.id;
     order.offeredAt = new Date();
     await this.orderRepository.save(order);
 
-    selected.totalOffered += 1;
-    selected.lastOfferAt = new Date();
-    await this.couriersRepository.save(selected);
+    selectedCourier.totalOffered += 1;
+    selectedCourier.lastOfferAt = new Date();
+    await this.couriersRepository.save(selectedCourier);
 
     console.log(
-      `📤 #${order.orderNumber} → ${selected.user?.fullName} (${scored[0].distance === Infinity ? '?' : scored[0].distance.toFixed(2)} km)`,
+      `📤 #${order.orderNumber} → ${selectedCourier.user?.fullName} (${selected.distance.toFixed(2)} km)`,
     );
 
-    if (selected.fcmToken) {
+    if (selectedCourier.fcmToken) {
       await this.notificationsService.sendNewOrderNotification(
-        [selected.fcmToken],
+        [selectedCourier.fcmToken],
         String(order.orderNumber),
         order.id,
       );
     }
 
-    return { courier: selected, order };
+    return { courier: selectedCourier, order };
   }
 
   async acceptOffer(orderId: string, courierId: string) {

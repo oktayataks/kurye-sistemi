@@ -25,19 +25,19 @@ export class NotificationsService {
         .send({
           token,
           notification: {
-            title: '🛵 Yeni Sipariş!',
-            body: `#${orderNumber} numaralı sipariş sizi bekliyor!`,
+            title: '🛵 Yakınında Sipariş Var!',
+            body: 'Yeni bir sipariş teklifi geldi. Detayları görmek için dokun.',
           },
           data: {
             orderId,
             orderNumber: String(orderNumber),
-            type: 'new_order',
+            type: 'new_order_offer',
           },
           android: {
             priority: 'high',
             notification: {
-              channelId: 'orders_channel',
               sound: 'default',
+              channelId: 'orders',
             },
           },
         })
