@@ -78,7 +78,7 @@ export class Order {
   @Column({ nullable: true, type: 'timestamp' })
   offeredAt: Date | null;
 
-  @Column({ type: 'simple-array', nullable: true })
+  @Column('text', { array: true, nullable: true })
   rejectedCourierIds: string[];
 
   @Column({ nullable: true, type: 'timestamp' })
