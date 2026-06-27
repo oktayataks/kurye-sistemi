@@ -292,18 +292,47 @@ export class OrdersService {
   }
 
   async acceptOffer(orderId: string, courierId: string) {
-    const order = await this.orderRepository.findOne({ where: { id: orderId } });
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['courier'],
+    });
 
-    if (!order || order.offeredCourierId !== courierId) {
-      throw new ForbiddenException('Bu sipariş size teklif edilmedi');
+    if (!order) {
+      throw new BadRequestException('Sipariş bulunamadı veya silinmiş');
+    }
+
+    if (order.courierId && order.courierId !== courierId) {
+      throw new BadRequestException('Bu siparişi başka bir kurye kabul etti');
+    }
+
+    if (order.status === OrderStatus.CANCELLED) {
+      throw new BadRequestException('Bu sipariş iptal edilmiş');
+    }
+
+    if (order.status === OrderStatus.DELIVERED) {
+      throw new BadRequestException('Bu sipariş zaten teslim edilmiş');
+    }
+
+    if (order.offeredCourierId !== courierId) {
+      throw new BadRequestException('Bu sipariş artık size teklif edilmiyor');
     }
 
     if (!order.offeredAt) {
-      throw new Error('Sipariş teklifi bulunamadı');
+      throw new BadRequestException('Sipariş teklifi geçersiz');
     }
+
     const offeredAt = new Date(order.offeredAt).getTime();
     if (Date.now() - offeredAt > 30000) {
       return this.rejectOffer(orderId, courierId, true);
+    }
+
+    const courier = await this.couriersRepository.findOne({ where: { id: courierId } });
+    if (!courier) {
+      throw new BadRequestException('Kurye bulunamadı');
+    }
+
+    if (courier.currentOrders >= 4) {
+      throw new BadRequestException('Maksimum 4 aktif siparişiniz var, önce birini tamamlayın');
     }
 
     order.courierId = courierId;
@@ -313,50 +342,45 @@ export class OrdersService {
     order.offeredAt = null;
     await this.orderRepository.save(order);
 
-    const courier = await this.couriersRepository.findOne({ where: { id: courierId } });
-    if (courier) {
-      courier.totalAccepted += 1;
-      courier.currentOrders += 1;
-      courier.acceptanceRate = this.calculateRate(courier.totalAccepted, courier.totalRejected);
-      await this.couriersRepository.save(courier);
-    }
+    courier.totalAccepted += 1;
+    courier.currentOrders += 1;
+    courier.acceptanceRate = this.calculateRate(courier.totalAccepted, courier.totalRejected);
+    await this.couriersRepository.save(courier);
+
+    console.log(`✅ #${order.orderNumber} kabul edildi - ${courier.user?.fullName || courierId}`);
 
     return order;
   }
 
   async rejectOffer(orderId: string, courierId: string, isTimeout = false) {
-    console.log(`🔴 rejectOffer ÇAĞRILDI - orderId: ${orderId}, courierId: ${courierId}, isTimeout: ${isTimeout}`);
-
     const order = await this.orderRepository.findOne({ where: { id: orderId } });
+
     if (!order) {
-      console.log('❌ Sipariş bulunamadı');
-      return null;
+      throw new BadRequestException('Sipariş bulunamadı');
+    }
+
+    if (order.offeredCourierId !== courierId) {
+      throw new BadRequestException('Bu sipariş artık size teklif edilmiyor');
     }
 
     const rejected: string[] = order.rejectedCourierIds ?? [];
-    console.log(`📋 Mevcut rejected: ${JSON.stringify(rejected)}`);
-
     if (!rejected.includes(courierId)) {
       rejected.push(courierId);
-      console.log(`✅ Eklendi yeni rejected: ${JSON.stringify(rejected)}`);
     }
 
     order.rejectedCourierIds = rejected;
     order.offeredCourierId = null;
     order.offeredAt = null;
-
-    const savedOrder = await this.orderRepository.save(order);
-    console.log(`💾 Kaydedildi rejectedCourierIds: ${JSON.stringify(savedOrder.rejectedCourierIds)}`);
+    await this.orderRepository.save(order);
 
     const courier = await this.couriersRepository.findOne({ where: { id: courierId } });
     if (courier) {
       courier.totalRejected += 1;
       courier.acceptanceRate = this.calculateRate(courier.totalAccepted, courier.totalRejected);
       await this.couriersRepository.save(courier);
-      console.log(`📊 ${courier.user?.fullName || courierId} red sayısı: ${courier.totalRejected}`);
     }
 
-    console.log(`❌ Sipariş #${order.orderNumber} reddedildi (${isTimeout ? 'timeout' : 'manuel'})`);
+    console.log(`❌ #${order.orderNumber} reddedildi (${isTimeout ? 'timeout' : 'manuel'})`);
 
     setTimeout(() => this.offerOrderToCourier(orderId), 1000);
     return order;
