@@ -1,13 +1,15 @@
 import {
   Injectable,
   NotFoundException,
+  BadRequestException,
   InternalServerErrorException,
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Courier } from './courier.entity';
+import { Order } from '../orders/order.entity';
 import { CreateCourierDto } from './dto/create-courier.dto';
 import { CreateCourierWithUserDto } from './dto/create-courier-with-user.dto';
 import { UpdateCourierDto } from './dto/update-courier.dto';
@@ -22,6 +24,10 @@ export class CouriersService {
   constructor(
     @InjectRepository(Courier)
     private readonly courierRepository: Repository<Courier>,
+    @InjectRepository(Order)
+    private readonly ordersRepository: Repository<Order>,
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -214,14 +220,48 @@ export class CouriersService {
     return { success: true };
   }
 
-  async remove(id: string): Promise<{ message: string }> {
+  async remove(id: string): Promise<{ success: boolean }> {
     try {
-      const courier = await this.findOne(id);
-      await this.courierRepository.remove(courier);
-      return { message: 'Kurye başarıyla silindi' };
+      const courier = await this.courierRepository.findOne({
+        where: { id },
+        relations: ['user'],
+      });
+
+      if (!courier) {
+        throw new NotFoundException('Kurye bulunamadı');
+      }
+
+      console.log('🗑️ Kurye siliniyor:', courier.user?.fullName, id);
+
+      const activeOrders = await this.ordersRepository.count({
+        where: { courierId: id, status: In(['assigned', 'picked_up']) },
+      });
+
+      console.log('📋 Aktif siparişler:', activeOrders);
+
+      if (activeOrders > 0) {
+        throw new BadRequestException(
+          `Bu kuryenin ${activeOrders} aktif siparişi var.`,
+        );
+      }
+
+      console.log('🔄 courierId temizleniyor...');
+      await this.ordersRepository.update({ courierId: id }, { courierId: null });
+
+      console.log('🗑️ Kurye kaydı siliniyor...');
+      await this.courierRepository.delete(id);
+
+      if (courier.userId) {
+        console.log('👤 User siliniyor:', courier.userId);
+        await this.usersRepository.delete(courier.userId);
+      }
+
+      console.log('✅ Silme başarılı!');
+      return { success: true };
     } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException('Kurye silinirken hata oluştu');
+      console.error('❌ KURYE SİLME HATASI:', error);
+      console.error('Stack:', error.stack);
+      throw error;
     }
   }
 }
