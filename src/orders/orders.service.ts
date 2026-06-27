@@ -6,7 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { IsNull, LessThan, Repository } from 'typeorm';
 import { Order, OrderStatus } from './order.entity';
 import { Courier } from '../couriers/courier.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -224,7 +224,7 @@ export class OrdersService {
     const now = new Date();
 
     const couriers = await this.couriersRepository.find({
-      where: { isOnline: true, currentOrders: 0 },
+      where: { isOnline: true, currentOrders: LessThan(4) },
       relations: ['user'],
     });
 
