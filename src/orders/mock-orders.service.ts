@@ -35,7 +35,7 @@ export class MockOrdersService {
 
   private readonly MOCK_SOURCES = ['Yemeksepeti', 'Getir', 'Trendyol Yemek', 'Manuel'];
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  // @Cron(CronExpression.EVERY_MINUTE)
   async generateMockOrder() {
     try {
       const restaurants = await this.restaurantsRepository.find();
