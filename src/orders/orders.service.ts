@@ -96,9 +96,16 @@ export class OrdersService {
     updateStatusDto: UpdateOrderStatusDto,
   ): Promise<Order> {
     try {
-      const order = await this.findOne(id);
+      const order = await this.orderRepository.findOne({
+        where: { id },
+        relations: ['courier'],
+      });
+      if (!order) {
+        throw new NotFoundException(`Sipariş bulunamadı: ${id}`);
+      }
 
-      this.validateStatusTransition(order.status, updateStatusDto.status);
+      const oldStatus = order.status;
+      this.validateStatusTransition(oldStatus, updateStatusDto.status);
       order.status = updateStatusDto.status;
 
       if (updateStatusDto.status === OrderStatus.ASSIGNED) {
@@ -121,7 +128,29 @@ export class OrdersService {
         order.cancelledAt = new Date();
       }
 
-      return await this.orderRepository.save(order);
+      await this.orderRepository.save(order);
+
+      // Sipariş tamamlandıysa veya iptal edildiyse kuryenin aktif sayısını düş
+      const isCompleted =
+        updateStatusDto.status === OrderStatus.DELIVERED ||
+        updateStatusDto.status === OrderStatus.CANCELLED;
+      const wasActive =
+        oldStatus === OrderStatus.ASSIGNED || oldStatus === OrderStatus.PICKED_UP;
+
+      if (isCompleted && wasActive && order.courierId) {
+        const courier = await this.couriersRepository.findOne({
+          where: { id: order.courierId },
+        });
+        if (courier && courier.currentOrders > 0) {
+          courier.currentOrders -= 1;
+          await this.couriersRepository.save(courier);
+          console.log(
+            `📉 ${courier.user?.fullName || courier.id} currentOrders: ${courier.currentOrders}`,
+          );
+        }
+      }
+
+      return order;
     } catch (error) {
       if (
         error instanceof NotFoundException ||
