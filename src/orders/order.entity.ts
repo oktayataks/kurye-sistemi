@@ -32,8 +32,8 @@ export class Order {
   @Column()
   restaurantId: string;
 
-  @Column({ nullable: true })
-  courierId: string;
+  @Column({ type: 'uuid', nullable: true })
+  courierId: string | null;
 
   @Column()
   @IsString()
@@ -99,9 +99,9 @@ export class Order {
   @JoinColumn({ name: 'restaurantId' })
   restaurant: Restaurant;
 
-  @ManyToOne(() => Courier, (courier) => courier.orders, { nullable: true })
+  @ManyToOne(() => Courier, { nullable: true })
   @JoinColumn({ name: 'courierId' })
-  courier: Courier;
+  courier: Courier | null;
 
   @CreateDateColumn()
   createdAt: Date;
