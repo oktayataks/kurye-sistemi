@@ -1,11 +1,15 @@
 import {
   Injectable,
   NotFoundException,
+  BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Restaurant } from './restaurant.entity';
+import { Order } from '../orders/order.entity';
+import { Customer } from '../customers/customer.entity';
+import { User } from '../users/user.entity';
 import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
@@ -16,6 +20,12 @@ export class RestaurantsService {
   constructor(
     @InjectRepository(Restaurant)
     private readonly restaurantRepository: Repository<Restaurant>,
+    @InjectRepository(Order)
+    private readonly ordersRepository: Repository<Order>,
+    @InjectRepository(Customer)
+    private readonly customersRepository: Repository<Customer>,
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
   ) {}
 
   async create(createRestaurantDto: CreateRestaurantDto): Promise<Restaurant> {
@@ -92,14 +102,28 @@ export class RestaurantsService {
     }
   }
 
-  async remove(id: string): Promise<{ message: string }> {
-    try {
-      const restaurant = await this.findOne(id);
-      await this.restaurantRepository.remove(restaurant);
-      return { message: 'Restoran başarıyla silindi' };
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException('Restoran silinirken hata oluştu');
+  async remove(id: string): Promise<{ success: boolean }> {
+    const restaurant = await this.restaurantRepository.findOne({ where: { id } });
+    if (!restaurant) {
+      throw new NotFoundException('Restoran bulunamadı');
     }
+
+    const activeOrders = await this.ordersRepository.count({
+      where: { restaurantId: id, status: In(['pending', 'assigned', 'picked_up']) },
+    });
+    if (activeOrders > 0) {
+      throw new BadRequestException(
+        `Bu restoranın ${activeOrders} aktif siparişi var. Önce tamamlayın.`,
+      );
+    }
+
+    await this.customersRepository.delete({ restaurantId: id });
+    await this.restaurantRepository.delete(id);
+
+    if (restaurant.userId) {
+      await this.usersRepository.delete(restaurant.userId);
+    }
+
+    return { success: true };
   }
 }

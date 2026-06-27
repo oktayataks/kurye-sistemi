@@ -132,26 +132,26 @@ export class OrdersService {
     }
   }
 
-  async remove(id: string): Promise<{ message: string }> {
-    try {
-      const order = await this.findOne(id);
-
-      if (order.status !== OrderStatus.PENDING) {
-        throw new ForbiddenException(
-          `Sadece 'pending' durumundaki siparişler silinebilir. Mevcut durum: ${order.status}`,
-        );
-      }
-
-      await this.orderRepository.remove(order);
-      return { message: 'Sipariş başarıyla silindi' };
-    } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ForbiddenException
-      )
-        throw error;
-      throw new InternalServerErrorException('Sipariş silinirken hata oluştu');
+  async remove(id: string): Promise<{ success: boolean }> {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    if (!order) {
+      throw new NotFoundException('Sipariş bulunamadı');
     }
+
+    if (order.status === OrderStatus.ASSIGNED || order.status === OrderStatus.PICKED_UP) {
+      throw new BadRequestException('Aktif sipariş silinemez! Önce iptal edin.');
+    }
+
+    if (order.courierId) {
+      const courier = await this.couriersRepository.findOne({ where: { id: order.courierId } });
+      if (courier && courier.currentOrders > 0) {
+        courier.currentOrders -= 1;
+        await this.couriersRepository.save(courier);
+      }
+    }
+
+    await this.orderRepository.delete(id);
+    return { success: true };
   }
 
   async getAvailableOrders() {

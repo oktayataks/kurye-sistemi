@@ -122,7 +122,10 @@ export default function Restaurants() {
       queryClient.invalidateQueries({ queryKey: ['restaurants'] });
       setDeleteTarget(null);
     },
-    onError: () => toast.error('Silme işlemi başarısız'),
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message;
+      toast.error(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Silme işlemi başarısız');
+    },
   });
 
   // ─── Eylem Tetikleyiciler ────────────────────────────────────────────────────

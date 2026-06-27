@@ -153,8 +153,10 @@ export default function Orders() {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       setDeleteOrder(null);
     },
-    onError: (err: any) =>
-      toast.error(err.response?.data?.message ?? 'Silme başarısız'),
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message;
+      toast.error(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Silme işlemi başarısız');
+    },
   });
 
   // ─── Filtrelenmiş siparişler ────────────────────────────────────────────────

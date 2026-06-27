@@ -121,11 +121,7 @@ export default function Users() {
     },
     onError: (err: any) => {
       const msg = err?.response?.data?.message;
-      toast.error(
-        Array.isArray(msg)
-          ? msg.join(', ')
-          : msg ?? 'Silme başarısız (kullanıcı bağlı kayıtlara sahip olabilir)',
-      );
+      toast.error(Array.isArray(msg) ? msg.join(', ') : msg ?? 'Silme işlemi başarısız');
     },
   });
 
