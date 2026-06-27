@@ -325,26 +325,39 @@ export class OrdersService {
   }
 
   async rejectOffer(orderId: string, courierId: string, isTimeout = false) {
+    console.log(`🔴 rejectOffer ÇAĞRILDI - orderId: ${orderId}, courierId: ${courierId}, isTimeout: ${isTimeout}`);
+
     const order = await this.orderRepository.findOne({ where: { id: orderId } });
-    if (!order) return null;
+    if (!order) {
+      console.log('❌ Sipariş bulunamadı');
+      return null;
+    }
 
     const rejected: string[] = order.rejectedCourierIds ?? [];
-    if (!rejected.includes(courierId)) rejected.push(courierId);
+    console.log(`📋 Mevcut rejected: ${JSON.stringify(rejected)}`);
+
+    if (!rejected.includes(courierId)) {
+      rejected.push(courierId);
+      console.log(`✅ Eklendi yeni rejected: ${JSON.stringify(rejected)}`);
+    }
+
     order.rejectedCourierIds = rejected;
     order.offeredCourierId = null;
     order.offeredAt = null;
-    await this.orderRepository.save(order);
+
+    const savedOrder = await this.orderRepository.save(order);
+    console.log(`💾 Kaydedildi rejectedCourierIds: ${JSON.stringify(savedOrder.rejectedCourierIds)}`);
 
     const courier = await this.couriersRepository.findOne({ where: { id: courierId } });
     if (courier) {
       courier.totalRejected += 1;
       courier.acceptanceRate = this.calculateRate(courier.totalAccepted, courier.totalRejected);
       await this.couriersRepository.save(courier);
+      console.log(`📊 ${courier.user?.fullName || courierId} red sayısı: ${courier.totalRejected}`);
     }
 
-    console.log(
-      `${isTimeout ? '⏰ Zaman aşımı' : '❌ Red'}: #${order.orderNumber} → yeni kurye aranıyor`,
-    );
+    console.log(`❌ Sipariş #${order.orderNumber} reddedildi (${isTimeout ? 'timeout' : 'manuel'})`);
+
     setTimeout(() => this.offerOrderToCourier(orderId), 1000);
     return order;
   }
