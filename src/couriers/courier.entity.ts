@@ -66,7 +66,7 @@ export class Courier {
   lastOfferAt: Date;
 
   @Column({ type: 'timestamp', nullable: true })
-  breakUntil: Date;
+  breakUntil: Date | null;
 
   @OneToOne(() => User, (user) => user.courier)
   @JoinColumn({ name: 'userId' })

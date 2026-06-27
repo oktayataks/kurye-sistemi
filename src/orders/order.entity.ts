@@ -73,10 +73,10 @@ export class Order {
   notes: string;
 
   @Column({ nullable: true, type: 'uuid' })
-  offeredCourierId: string;
+  offeredCourierId: string | null;
 
   @Column({ nullable: true, type: 'timestamp' })
-  offeredAt: Date;
+  offeredAt: Date | null;
 
   @Column({ type: 'simple-array', nullable: true })
   rejectedCourierIds: string[];
