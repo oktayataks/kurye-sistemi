@@ -83,6 +83,7 @@ export default function Orders() {
           ...(restaurantFilter !== 'all' && { restaurantId: restaurantFilter }),
         })
         .then((r) => r.data as PaginatedResult<Order>),
+    refetchInterval: 10000,
   });
 
   const { data: restaurantsData } = useQuery({

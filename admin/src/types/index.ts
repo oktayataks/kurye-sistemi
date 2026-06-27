@@ -39,6 +39,13 @@ export interface Courier {
   isOnline: boolean;
   currentOrders: number;
   rating: number;
+  fcmToken?: string;
+  totalOffered: number;
+  totalAccepted: number;
+  totalRejected: number;
+  acceptanceRate: number;
+  lastOfferAt?: string;
+  breakUntil?: string | null;
   createdAt: string;
   updatedAt: string;
   user?: User;

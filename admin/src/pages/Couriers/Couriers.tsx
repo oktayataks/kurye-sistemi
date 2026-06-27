@@ -24,6 +24,7 @@ import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { VEHICLE_LABELS } from '../../utils/helpers';
 import CourierModal, { type CourierFormData } from './CourierModal';
 import CourierMapModal from './CourierMapModal';
+import CourierDetailModal from './CourierDetailModal';
 import CredentialsModal, { type NewCourierCredentials } from './CredentialsModal';
 
 const PAGE_SIZE = 20;
@@ -43,6 +44,7 @@ export default function Couriers() {
   const [mapTarget, setMapTarget] = useState<Courier | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Courier | null>(null);
   const [credentials, setCredentials] = useState<NewCourierCredentials | null>(null);
+  const [selectedCourier, setSelectedCourier] = useState<Courier | null>(null);
 
   // ─── Veri çekme ─────────────────────────────────────────────────────────────
   const { data, isLoading, isFetching } = useQuery({
@@ -55,6 +57,7 @@ export default function Couriers() {
           ...(onlineFilter !== 'all' ? { isOnline: onlineFilter === 'online' } : {}),
         })
         .then((r) => r.data as PaginatedResult<Courier>),
+    refetchInterval: 10000,
   });
 
   const meta = data?.meta;
@@ -324,7 +327,11 @@ export default function Couriers() {
             {/* Mobile: kart görünümü */}
             <div className="md:hidden divide-y divide-gray-100">
               {filteredCouriers.map((c) => (
-                <div key={c.id} className="p-4 space-y-2">
+                <div
+                  key={c.id}
+                  className="p-4 space-y-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => setSelectedCourier(c)}
+                >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
@@ -335,7 +342,7 @@ export default function Couriers() {
                         <p className="text-xs text-gray-400 truncate">{c.user?.email}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
+                    <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => setMapTarget(c)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
                         <MdMyLocation className="text-base" />
                       </button>
@@ -397,7 +404,11 @@ export default function Couriers() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filteredCouriers.map((c) => (
-                    <tr key={c.id} className="hover:bg-gray-50/70 transition-colors">
+                    <tr
+                      key={c.id}
+                      className="hover:bg-gray-50/70 transition-colors cursor-pointer"
+                      onClick={() => setSelectedCourier(c)}
+                    >
                       {/* İsim + email */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
@@ -457,7 +468,7 @@ export default function Couriers() {
                       </td>
 
                       {/* İşlemler */}
-                      <td className="px-5 py-3.5">
+                      <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => setMapTarget(c)}
@@ -562,6 +573,14 @@ export default function Couriers() {
         credentials={credentials}
         onClose={() => setCredentials(null)}
       />
+
+      {/* Detay modal */}
+      {selectedCourier && (
+        <CourierDetailModal
+          courier={selectedCourier}
+          onClose={() => setSelectedCourier(null)}
+        />
+      )}
 
       {/* Silme onayı */}
       <ConfirmDialog

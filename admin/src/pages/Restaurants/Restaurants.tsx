@@ -17,6 +17,7 @@ import { SkeletonTable } from '../../components/common/Skeleton';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { formatDate } from '../../utils/helpers';
 import RestaurantModal, { type RestaurantFormData } from './RestaurantModal';
+import RestaurantDetailModal from './RestaurantDetailModal';
 
 const PAGE_SIZE = 20;
 
@@ -29,6 +30,7 @@ export default function Restaurants() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Restaurant | null>(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
 
   // ─── Veri çekme ─────────────────────────────────────────────────────────────
   const { data, isLoading, isFetching } = useQuery({
@@ -37,6 +39,7 @@ export default function Restaurants() {
       restaurantsApi
         .getAll({ page, limit: PAGE_SIZE })
         .then((r) => r.data as PaginatedResult<Restaurant>),
+    refetchInterval: 10000,
   });
 
   const meta = data?.meta;
@@ -208,7 +211,11 @@ export default function Restaurants() {
             {/* Mobile: kart görünümü */}
             <div className="md:hidden divide-y divide-gray-100">
               {filteredRestaurants.map((r) => (
-                <div key={r.id} className="p-4 space-y-2">
+                <div
+                  key={r.id}
+                  className="p-4 space-y-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => setSelectedRestaurant(r)}
+                >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
@@ -221,7 +228,7 @@ export default function Restaurants() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
+                    <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => openEdit(r)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg">
                         <MdEdit className="text-base" />
                       </button>
@@ -274,7 +281,11 @@ export default function Restaurants() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filteredRestaurants.map((r) => (
-                    <tr key={r.id} className="hover:bg-gray-50/70 transition-colors">
+                    <tr
+                      key={r.id}
+                      className="hover:bg-gray-50/70 transition-colors cursor-pointer"
+                      onClick={() => setSelectedRestaurant(r)}
+                    >
                       {/* Logo + İsim */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
@@ -325,7 +336,7 @@ export default function Restaurants() {
                       </td>
 
                       {/* İşlemler */}
-                      <td className="px-5 py-3.5">
+                      <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => openEdit(r)}
@@ -407,6 +418,14 @@ export default function Restaurants() {
         onClose={closeModal}
         onSubmit={handleSubmit}
       />
+
+      {/* Detay modal */}
+      {selectedRestaurant && (
+        <RestaurantDetailModal
+          restaurant={selectedRestaurant}
+          onClose={() => setSelectedRestaurant(null)}
+        />
+      )}
 
       {/* Silme Onay Dialogu */}
       <ConfirmDialog
