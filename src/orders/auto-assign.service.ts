@@ -34,7 +34,9 @@ export class AutoAssignService {
       .getMany();
 
     for (const order of expiredOffers) {
-      await this.ordersService.rejectOffer(order.id, order.offeredCourierId, true);
+      if (order.offeredCourierId) {
+        await this.ordersService.rejectOffer(order.id, order.offeredCourierId, true);
+      }
     }
   }
 }

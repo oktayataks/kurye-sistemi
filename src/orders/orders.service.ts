@@ -298,6 +298,9 @@ export class OrdersService {
       throw new ForbiddenException('Bu sipariş size teklif edilmedi');
     }
 
+    if (!order.offeredAt) {
+      throw new Error('Sipariş teklifi bulunamadı');
+    }
     const offeredAt = new Date(order.offeredAt).getTime();
     if (Date.now() - offeredAt > 30000) {
       return this.rejectOffer(orderId, courierId, true);
