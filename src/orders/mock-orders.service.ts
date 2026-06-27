@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Order, OrderStatus } from './order.entity';
 import { Courier } from '../couriers/courier.entity';
 import { Restaurant } from '../restaurants/restaurant.entity';
@@ -18,56 +19,42 @@ export class MockOrdersService {
     private notificationsService: NotificationsService,
   ) {}
 
-  private mockCustomers = [
-    { name: 'Ahmet Yılmaz', phone: '0532 111 2233' },
-    { name: 'Ayşe Demir', phone: '0543 222 3344' },
-    { name: 'Mehmet Kaya', phone: '0555 333 4455' },
-    { name: 'Fatma Şahin', phone: '0534 444 5566' },
-    { name: 'Ali Öztürk', phone: '0544 555 6677' },
-    { name: 'Zeynep Çelik', phone: '0556 666 7788' },
-    { name: 'Mustafa Arslan', phone: '0535 777 8899' },
-    { name: 'Emine Kurt', phone: '0545 888 9900' },
+  // Kartal (40.86, 29.33) merkez alınarak hazırlandı
+  // Sınır içi (<5 km): sipariş teklifi gelmeli
+  // Sınır dışı (>5 km): teklif gelmemeli
+  private readonly MOCK_CUSTOMERS = [
+    { name: 'Ahmet Yılmaz',  phone: '05551111111', address: 'Kartal Soğanlık Mah.',             lat: 40.8650, lng: 29.3250 },
+    { name: 'Fatma Kaya',    phone: '05552222222', address: 'Kartal Cevizli Mah. Bağdat Cad. No:42', lat: 40.8810, lng: 29.3180 },
+    { name: 'Mehmet Demir',  phone: '05553333333', address: 'Pendik Şeyhli Mah.',                lat: 40.8550, lng: 29.3700 },
+    { name: 'Selin Öztürk',  phone: '05557777777', address: 'Maltepe Bağdat Cad. No:123',        lat: 40.8700, lng: 29.3050 },
+    // Sınır dışı — teklif gelmemeli
+    { name: 'Ali Şahin',     phone: '05554444444', address: 'Pendik Çamçeşme Mah.',              lat: 40.8800, lng: 29.2300 },
+    { name: 'Zeynep Aydın',  phone: '05555555555', address: 'Tuzla Aydınlı Mah.',               lat: 40.8200, lng: 29.4500 },
+    { name: 'Mustafa Arslan',phone: '05556666666', address: 'Gebze Hacı Halil Mah.',             lat: 40.7872, lng: 29.4307 },
   ];
 
-  private mockAddresses = [
-    { address: 'Kadıköy Moda Cad. No:15 Daire:3', lat: 40.9877, lng: 29.0255 },
-    { address: 'Beşiktaş Barbaros Bulvarı No:42', lat: 41.0432, lng: 29.0088 },
-    { address: 'Üsküdar Bağlarbaşı Cad. No:8', lat: 41.0218, lng: 29.0175 },
-    { address: 'Şişli Halaskargazi Cad. No:55', lat: 41.0602, lng: 28.9877 },
-    { address: 'Maltepe Bağdat Cad. No:123', lat: 40.9354, lng: 29.1332 },
-    { address: 'Ataşehir Atatürk Mah. No:67', lat: 40.9923, lng: 29.1244 },
-    { address: 'Pendik Yeni Mah. No:34', lat: 40.8742, lng: 29.2576 },
-    { address: 'Bakırköy İstasyon Cad. No:12', lat: 40.9812, lng: 28.8742 },
-  ];
+  private readonly MOCK_SOURCES = ['Yemeksepeti', 'Getir', 'Trendyol Yemek', 'Manuel'];
 
-  private mockSources = [
-    'Yemeksepeti',
-    'Getir',
-    'Trendyol Yemek',
-    'Manuel',
-  ];
-
-  // @Cron('*/2 * * * *') — otomatik üretim devre dışı, manuel tetikleme için generateSingleOrder kullan
+  @Cron(CronExpression.EVERY_MINUTE)
   async generateMockOrder() {
     try {
       const restaurants = await this.restaurantsRepository.find();
       if (restaurants.length === 0) return;
 
-      const restaurant = restaurants[Math.floor(Math.random() * restaurants.length)];
-      const customer = this.mockCustomers[Math.floor(Math.random() * this.mockCustomers.length)];
-      const deliveryAddress = this.mockAddresses[Math.floor(Math.random() * this.mockAddresses.length)];
-      const source = this.mockSources[Math.floor(Math.random() * this.mockSources.length)];
+      const customer = this.MOCK_CUSTOMERS[Math.floor(Math.random() * this.MOCK_CUSTOMERS.length)];
+      const source = this.MOCK_SOURCES[Math.floor(Math.random() * this.MOCK_SOURCES.length)];
+      const selectedRestaurant = restaurants[Math.floor(Math.random() * restaurants.length)];
 
       const orderTotal = Math.floor(Math.random() * 200 + 50);
       const deliveryFee = Math.floor(Math.random() * 20 + 10);
 
       const order = this.ordersRepository.create({
-        restaurantId: restaurant.id,
+        restaurantId: selectedRestaurant.id,
         customerName: customer.name,
         customerPhone: customer.phone,
-        deliveryAddress: deliveryAddress.address,
-        deliveryLatitude: deliveryAddress.lat,
-        deliveryLongitude: deliveryAddress.lng,
+        deliveryAddress: customer.address,
+        deliveryLatitude: customer.lat,
+        deliveryLongitude: customer.lng,
         orderTotal,
         deliveryFee,
         status: OrderStatus.PENDING,
@@ -75,24 +62,7 @@ export class MockOrdersService {
       });
 
       const saved = await this.ordersRepository.save(order);
-      console.log(`✅ Mock sipariş oluşturuldu: #${saved.orderNumber} - ${customer.name}`);
-
-      // Online kuryelere yeni sipariş bildirimi gönder
-      const onlineCouriers = await this.couriersRepository.find({
-        where: { isOnline: true },
-      });
-      const tokens = onlineCouriers
-        .filter((c) => c.fcmToken)
-        .map((c) => c.fcmToken);
-      if (tokens.length > 0) {
-        await this.notificationsService.sendNewOrderNotification(
-          tokens,
-          String(saved.orderNumber),
-          saved.id,
-        );
-      }
-
-
+      console.log(`✅ Mock sipariş oluşturuldu: #${saved.orderNumber} - ${customer.name} (${customer.lat}, ${customer.lng})`);
     } catch (error) {
       console.error('Mock sipariş oluşturulamadı:', error);
     }
