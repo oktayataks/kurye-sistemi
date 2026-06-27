@@ -327,11 +327,7 @@ export default function Couriers() {
             {/* Mobile: kart görünümü */}
             <div className="md:hidden divide-y divide-gray-100">
               {filteredCouriers.map((c) => (
-                <div
-                  key={c.id}
-                  className="p-4 space-y-2 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => setSelectedCourier(c)}
-                >
+                <div key={c.id} className="p-4 space-y-2">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
@@ -342,7 +338,14 @@ export default function Couriers() {
                         <p className="text-xs text-gray-400 truncate">{c.user?.email}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => setSelectedCourier(c)}
+                        className="text-blue-600 hover:bg-blue-50 px-2 py-1 rounded text-xs font-medium"
+                        title="Detayları gör"
+                      >
+                        👁️ Detay
+                      </button>
                       <button onClick={() => setMapTarget(c)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
                         <MdMyLocation className="text-base" />
                       </button>
@@ -404,11 +407,7 @@ export default function Couriers() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filteredCouriers.map((c) => (
-                    <tr
-                      key={c.id}
-                      className="hover:bg-gray-50/70 transition-colors cursor-pointer"
-                      onClick={() => setSelectedCourier(c)}
-                    >
+                    <tr key={c.id} className="hover:bg-gray-50/70 transition-colors">
                       {/* İsim + email */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
@@ -468,8 +467,15 @@ export default function Couriers() {
                       </td>
 
                       {/* İşlemler */}
-                      <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-5 py-3.5">
                         <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setSelectedCourier(c)}
+                            title="Detayları gör"
+                            className="text-blue-600 hover:bg-blue-50 px-2 py-1 rounded text-xs font-medium"
+                          >
+                            👁️ Detay
+                          </button>
                           <button
                             onClick={() => setMapTarget(c)}
                             title="Konumu göster"

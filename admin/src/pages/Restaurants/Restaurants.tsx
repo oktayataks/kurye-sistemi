@@ -211,11 +211,7 @@ export default function Restaurants() {
             {/* Mobile: kart görünümü */}
             <div className="md:hidden divide-y divide-gray-100">
               {filteredRestaurants.map((r) => (
-                <div
-                  key={r.id}
-                  className="p-4 space-y-2 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => setSelectedRestaurant(r)}
-                >
+                <div key={r.id} className="p-4 space-y-2">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
@@ -228,7 +224,13 @@ export default function Restaurants() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => setSelectedRestaurant(r)}
+                        className="text-blue-600 hover:bg-blue-50 px-2 py-1 rounded text-xs font-medium"
+                      >
+                        👁️ Detay
+                      </button>
                       <button onClick={() => openEdit(r)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg">
                         <MdEdit className="text-base" />
                       </button>
@@ -281,11 +283,7 @@ export default function Restaurants() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filteredRestaurants.map((r) => (
-                    <tr
-                      key={r.id}
-                      className="hover:bg-gray-50/70 transition-colors cursor-pointer"
-                      onClick={() => setSelectedRestaurant(r)}
-                    >
+                    <tr key={r.id} className="hover:bg-gray-50/70 transition-colors">
                       {/* Logo + İsim */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
@@ -336,8 +334,15 @@ export default function Restaurants() {
                       </td>
 
                       {/* İşlemler */}
-                      <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-5 py-3.5">
                         <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setSelectedRestaurant(r)}
+                            title="Detayları gör"
+                            className="text-blue-600 hover:bg-blue-50 px-2 py-1 rounded text-xs font-medium"
+                          >
+                            👁️ Detay
+                          </button>
                           <button
                             onClick={() => openEdit(r)}
                             title="Düzenle"
